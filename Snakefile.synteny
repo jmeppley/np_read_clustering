@@ -1,0 +1,44 @@
+
+cluster_id = '168'
+sub_cluster = 2
+short_reads = '/mnt/delong/scratch2/jmeppley/nanopore_biller/illumina/QC/HSD00-20a-319-25m-LV-Tailed-Phage.clean.fastq'
+cluster_mcl_template = 'spike_search/refine_lastal/cluster.{cluster_id}/cluster.{cluster_id}.self.m8.I5.0.mcl'
+cluster_reads_template = 'spike_search/mcl_all/reads/cluster.{cluster_id}.fasta'
+
+rule all:
+    input: f"cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.faa.pfam.tbl.U"
+
+rule unique_pfam:
+    input:
+        domtbl='{prefix}/{name}.faa.pfam.tbl',
+    output:
+        domtblU='{prefix}/{name}.faa.pfam.tbl.U',
+    shell:
+        "filter_blast_m8.py -f hmmsearchdom {input.domtbl} -U -s score  > {output.domtblU}"
+
+rule genes_pfam:
+    input:
+        faa='{prefix}/{name}.faa',
+    output: 
+        domtbl='{prefix}/{name}.faa.pfam.tbl',
+    threads: 5
+    shell: "hmmsearch --cpu {threads} --domtblout {output.domtbl} /mnt/delong/seqdbs/PFAM/33.1/Pfam-A.hmm {input.faa} > /dev/null"
+
+rule prodigal:
+    input: '{prefix}/{name}.fasta',
+    output:
+        faa='{prefix}/{name}.faa',
+        gff='{prefix}/{name}.gff',
+    shell: 'prodigal -a {output.faa} -f gff -o {output.gff} -p meta -i {input}'
+    
+rule sub_cluster_fasta:
+    input:
+        list="cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.list",
+        fasta=cluster_reads_template
+    output: "cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.fasta"
+    shell: 'screen_list.py -k -l {input.list} {input.fasta} > {output}'
+    
+rule sub_cluster_read_list:
+    input: cluster_mcl_template
+    output: "cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.list"
+    shell: "head -n {wildcards.sub_cluster} {input} | tail -n 1 > {output}"

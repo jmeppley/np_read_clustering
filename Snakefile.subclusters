@@ -1,0 +1,62 @@
+
+# config
+sigma_cutoff = config.get('sigma_cutoff', 500)
+mcl_i = config.get('mcl_i', 5.0)
+mfrac_cutoff = config.get('mfrac_cutoff', 85)
+
+# file names
+name = config.get('name','HOT_319')
+output_dir = config.get('output_dir', 'spike_search')
+
+checkpoint choose_subclusters:
+    """
+    Go through mcl file. For each cluster:
+      * find reads in window fasta files
+      * check length distribution
+      * if it passes, write out fasta file
+    """
+    input:
+        fasta='{output_dir}/mcl_all/reads/cluster.{cluster_id}.fasta',
+        lastal='{output_dir}/refine_lastal/cluster.{cluster_id}/cluster.{cluster_id}.self.m8',
+        agg='{output_dir}/refine_lastal/cluster.{cluster_id}/cluster.{cluster_id}.self.m8.agg',
+        mcl=lambda w: \
+            '{output_dir}/refine_lastal/cluster.{cluster_id}/cluster.{cluster_id}.self.m8.gt{mfrac_cutoff}.I{mcl_I}.mcl'\
+                .format(mfrac_cutoff=mfrac_cutoff, mcl_I=mcl_i, **w),
+        faa='{output_dir}/mcl_all/reads/cluster.{cluster_id}.faa',
+        domtbl='{output_dir}/mcl_all/reads/cluster.{cluster_id}.faa.pfam.tbl.U',
+    output:
+        fasta_dir=directory('{output_dir}/refine_lastal/cluster.{cluster_id}/subclusters/reads'),
+        stats='{output_dir}/refine_lastal/cluster.{cluster_id}/subclusters/cluster_stats.tsv',
+        hist_pdf='{output_dir}/refine_lastal/cluster.{cluster_id}/subclusters/cluster_hists.pdf',
+        gene_pdf='{output_dir}/refine_lastal/cluster.{cluster_id}/subclusters/cluster_synteny.pdf',
+    params:
+        sigma_cutoff=sigma_cutoff,
+        min_sub_size=10,
+        max_colored_genes=8,
+        gene_cmap='gnuplot2',
+        max_synteny_reads=15,
+        read_cmap='cool'
+    script: 'sub_cluster_synteny_plot.py'
+        
+rule unique_pfam:
+    input:
+        domtbl='{prefix}/{name}.faa.pfam.tbl',
+    output:
+        domtblU='{prefix}/{name}.faa.pfam.tbl.U',
+    shell:
+        "filter_blast_m8.py -f hmmsearchdom {input.domtbl} -U -s score  > {output.domtblU}"
+
+rule genes_pfam:
+    input:
+        faa='{prefix}/{name}.faa',
+    output: 
+        domtbl='{prefix}/{name}.faa.pfam.tbl',
+    threads: 5
+    shell: "hmmsearch --cpu {threads} --domtblout {output.domtbl} /mnt/delong/seqdbs/PFAM/33.1/Pfam-A.hmm {input.faa} > /dev/null"
+
+rule prodigal:
+    input: '{prefix}/{name}.fasta',
+    output:
+        faa='{prefix}/{name}.faa',
+        gff='{prefix}/{name}.gff',
+    shell: 'prodigal -a {output.faa} -f gff -o {output.gff} -p meta -i {input}'
