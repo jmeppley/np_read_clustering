@@ -1,0 +1,108 @@
+from Bio import SeqIO
+import numpy, pandas, os
+from scipy import stats
+from snakemake import logger
+from jme.jupy_tools.utils import BLAST_PLUS
+
+# config
+sigma_cutoff_pre = config.get('sigma_cutoff', 800)
+sigma_cutoff = config.get('sigma_cutoff', 400)
+ratio_cutoff = config.get('ratio_cutoff', 2.5)
+mcl_i = config.get('mcl_i', 5.0)
+mfrac_cutoff = config.get('mfrac_cutoff', 90)
+
+# just do one group
+GROUP = config.get('group', -1)
+if GROUP >= 0:
+    logger.warning("Processing group: {}".format(GROUP))
+
+# file names
+summary_table = config['nanopore_summary']
+all_fasta = config['nanopore_fasta']
+name = config.get('name','HOT_319')
+output_dir = config.get('output_dir', 'spike_search')
+windowed_fasta_template = output_dir + "/windows/reads/reads.{window}.fasta"
+windowed_abc_template = output_dir + "/windows/cluster/window.{window}/self.abc"
+windows, = glob_wildcards(windowed_abc_template)
+
+def get_cluster_mcl_files(wildcards):
+    return [f'{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{mfrac_cutoff}.I{mcl_i}.mcl' \
+            for group, cluster in get_pre_filtered_clusters()]
+
+rule all:
+    input: get_cluster_mcl_files
+
+rule cluster_abc:
+    """ generate hit -> query -> mfrac table for mfrac over cutoff """
+    input: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
+    output: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{mfrac_cutoff}.abc'
+    run: 
+        from jme.jupy_tools.utils import BLAST_PLUS
+        pandas.read_csv(str(input), sep='\t') \
+            .query(f'mfrac >= {mfrac_cutoff}') \
+            .set_index(['query','hit']) \
+            .mfrac \
+            .to_csv(str(output), sep='\t', header=None)
+
+rule agg_lastal_hits:
+    input: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8'
+    output: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
+    params:
+        format=BLAST_PLUS
+    script: 'aggregate_lastal_hits.py'
+
+rule cluster_lastal:
+    input: '{output_dir}/mcl_all/reads/group.{group}/cluster.{cluster}.fasta'
+    output: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8'
+    params:
+        dbd='{output_dir}/mcl_all/reads/ldb/group.{group}/cluster.{cluster}.ldb'
+    threads: 10
+    shell:
+        """
+        mkdir {params.dbd}
+        lastdb -P {threads} {params.dbd}/lastdb {input}
+        lastal -f blasttab+ -P {threads} {params.dbd}/lastal {input} > {output} 2> {output}.log
+        """
+
+def get_pre_filtered_clusters():
+    reads_dir = checkpoints.choose_clusters.get().output.reads
+
+    # hack to process groups faster
+    if GROUP >= 0:
+        clusters, = glob_wildcards(reads_dir + f"/group.{GROUP}/cluster.{{cluster}}.fasta")
+        return [(GROUP,c) for c in clusters]
+
+    groups, clusters, = glob_wildcards(reads_dir + "/group.{group}/cluster.{cluster}.fasta")
+    return [(g,c) for g,c in zip(groups, clusters)]
+
+checkpoint choose_clusters:
+    """
+    Go through mcl file. For each cluster:
+      * find reads in window fasta files
+      * check length distribution
+      * if it passes, write out fasta file
+    """
+    input:
+        mcl=f'{output_dir}/mcl_all/all.I{mcl_i}.mcl',
+        fasta=all_fasta
+    output:
+        reads=directory(f'{output_dir}/mcl_all/reads'),
+        stats=f'{output_dir}/mcl_all/cluster_stats.tsv',
+        #pdf=f'{output_dir}/mcl_all/cluster_plots.pdf'
+    params:
+        sigma_cutoff=sigma_cutoff_pre,
+        summary=summary_table
+    script: 'choose_mcl_all_clusters.py'
+        
+rule concat_abc:
+    """ Just blindly concatenate all the distance (abc) files into one """
+    input: expand(windowed_abc_template, window=windows)
+    output: f'{output_dir}/mcl_all/all.abc'
+    shell: 'cat {input} > {output}'
+        
+rule mcl:
+    input: '{file_root}.abc'
+    output: '{file_root}.I{mcl_i}.mcl'
+    shell:
+        "mcl {input} --abc -I {wildcards.mcl_i} -o {output} > {output}.log 2>&1"
+    
