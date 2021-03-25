@@ -1,12 +1,11 @@
 from Bio import SeqIO
 
-nanopore_fasta = config.get('fasta_file', 'nanopore_reads.fasta')
-output_dir = config.get('output_dir', 'spike_search')
-window_size = config.get('window_size', 2_000)
-overlap = config.get('window_overlap', int(window_size/2))
-window_spacing = window_size - overlap
-min_size = config.get('minimum_size', 0)
-mcl_i = "{:0.1f}".format(config.get('mcl_i', 5.0))
+# clustering parameters
+WINDOW_SIZE = config.get('window_size', 2_000)
+OVERLAP = config.get('window_overlap', int(WINDOW_SIZE/2))
+WINDOW_SPACING = WINDOW_SIZE - OVERLAP
+MIN_SIZE = config.get('minimum_size', 0)
+MM_COV_FRAC = config.get('minimap_cov_frac', .8)
 
 def get_cluster_mcl_files(wildcards):
     return [f'{output_dir}/windows/cluster/window.{window}/self.I{mcl_i}.mcl' 
@@ -21,17 +20,26 @@ rule mcl:
     shell:
         "mcl {input} --abc -I {wildcards.mcl_i} -o {output} > {output}.log 2>&1"
 
+rule all_abc:
+    """ concatenate all the ABC files into one. It's crazy, but it works. """
+    input: lambda w: [f"{w.work_dir}/windows/cluster/window.{window}/self.abc" \
+                      for window in get_windows()]
+    output: "{work_dir}/mcl_all/all.abc"
+    shell: "cat {input} > {output}"
+
 rule window_abc:
+    """
+    Aggregates hits for query/hit pairs, filters for 80% coverage, and
+    writes mfrac (= %ID * frac covered) to distance matrix (abc file)
+    """
     input: '{output_dir}/windows/cluster/window.{window}/self.paf'
     output: '{output_dir}/windows/cluster/window.{window}/self.abc'
     run:
-        from jme.jupy_tools.utils import parse_blast_m8, PAF
+        from jme.jupy_tools.hit_tables import agg_hit_table, PAF
         paf_file = str(input)
         if os.path.getsize(paf_file) > 0:
-            mm_hits = parse_blast_m8(paf_file, format=PAF)
-            mm_hits \
-                .query('mlen > .4 * (qlen + hlen)') \
-                .eval('mfrac = 2 * matches / (hlen + qlen)') \
+            agg_hit_table(paf_file, format=PAF) \
+                .query(f'mlen >= {MM_COV_FRAC} * ((qlen + hlen) / 2)') \
                 .set_index(['query', 'hit']) \
                 .mfrac \
                 .to_csv(str(output), sep='\t', header=None)
@@ -55,7 +63,7 @@ def get_windows():
     return windows
 
 checkpoint apply_fasta_size_window:
-    input: nanopore_fasta
+    input: ALL_FASTA
     output: 
         fasta=directory(f'{output_dir}/windows/reads'),
         counts=f'{output_dir}/windows/read_counts.txt'
@@ -68,24 +76,24 @@ checkpoint apply_fasta_size_window:
         os.makedirs(str(output.fasta), exist_ok=True)
         for i, read in enumerate(SeqIO.parse(str(input), 'fasta')):
             l = len(read)
-            if l < min_size:
+            if l < MIN_SIZE:
                 continue
             
             windows = []
             
-            window_num = int(l / (window_spacing))
-            window_start = window_num * window_spacing
-            window_end = window_start + window_size
+            window_num = int(l / (WINDOW_SPACING))
+            window_start = window_num * WINDOW_SPACING
+            window_end = window_start + WINDOW_SIZE
             
             # shift down incase we'd be in the end of an earlier window
-            while window_end > l + window_spacing:
+            while window_end > l + WINDOW_SPACING:
                 window_num -= 1
-                window_start = window_num * window_spacing
-                window_end = window_start + window_size
+                window_start = window_num * WINDOW_SPACING
+                window_end = window_start + WINDOW_SIZE
 
             # loop over all windows this read is in
             while window_start <= l:
-                window_end = window_start + window_size
+                window_end = window_start + WINDOW_SIZE
                 window = f"{window_start}_{window_end}"
 
                 counts[window] = counts.get(window, 0) + 1
@@ -103,7 +111,7 @@ checkpoint apply_fasta_size_window:
                 fasta_out.write(read.format('fasta'))
             
                 window_num += 1
-                window_start = window_num * window_spacing
+                window_start = window_num * WINDOW_SPACING
             
             llogger_read.log("wrote read %d (%s) of len %d to window %s", (i, read.id, l, windows))
             

@@ -1,19 +1,38 @@
+"""
+Rules to polish a subcluster
+"""
 
-cluster_id = '168'
-sub_cluster = 2
-short_reads = '/mnt/delong/scratch2/jmeppley/nanopore_biller/illumina/QC/HSD00-20a-319-25m-LV-Tailed-Phage.clean.fastq'
-cluster_mcl_template = 'spike_search/refine_lastal/cluster.{cluster_id}/cluster.{cluster_id}.self.m8.I5.0.mcl'
-cluster_reads_template = 'spike_search/mcl_all/reads/cluster.{cluster_id}.fasta'
-pctid_cutoff = '90'
+from Bio import SeqIO
+import pandas, numpy
+
+RACON_ITERS = config.get('racon_iters', 3)
+MIN_Q = config.get('min_q', 9)
+
+def get_polished_comparison_files()
+    """ return a list of output files for the polishing step for all subclusters
+    if GROUP is set (config['group']), only that group of clusters is processed """
+
+    out_fnames = ['medaka.v.drafts.gene.lengths',
+                  'medaka.v.drafts.m8.agg']
+    return [(SUBCLUSTER_DIR_TEMPLATE + "/" + fname).format(**locals()) \
+            for group, cluster in get_pre_filtered_clusters() \
+            for subcluster in get_pre_filtered_subcluster(group, cluster) \
+            for fname in out_fnames \
+           ]
+
+def named_comparison_inputs(wildcards):
+    " return a namedlist of faa files from polishing drafts "
+    from snakemake.io import Namedlist
+    input_dict = {'medaka': f'{wildcards.prefix}/medaka.faa'}
+    for i in range(RACON_ITERS + 1):
+        input_dict[f'draft_{i}'] = f'{wildcards.prefix}/draft.{i}.faa'
+    return Namedlist(fromdict=input_dict)
 
 rule compare_genes:
-    input:
-        raw_reads='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.faa',
-        polished='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.pilon.faa'
-    output: 'cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.raw.v.polished.gt{pctid_cutoff}.genes.tsv'
+    """ tabulate the number, mean length, and total AAs of predicted genes for each draft """
+    input: named_comparison_inputs
+    output: '{prefix}/medaka.v.drafts.gene.lengths'
     run:
-        from Bio import SeqIO
-        import numpy, pandas
         data = []
         names = []
         for name, faa_file in input.items():
@@ -32,116 +51,94 @@ rule compare_genes:
             names.append(name)
         stats = pandas.DataFrame(data, index=names)
         stats.sort_index().to_csv(str(output), sep='\t')            
-        
-rule prodigal:
-    input: '{prefix}/{name}.fasta',
+
+rule agg_draft_hits:
+    """ aggregate the lastal output by hit/query pairs to get a shorter summary table """
+    input:
+        '{prefix}/medaka.v.drafts.m8'
     output:
-        faa='{prefix}/{name}.faa',
-        gff='{prefix}/{name}.gff',
-    shell: 'prodigal -a {output.faa} -f gff -o {output.gff} -p meta -i {input}'
-    
-rule pilon_fasta:
-    input: '{prefix}_pilon/pilon.fasta'
-    output: '{prefix}.pilon.fasta'
-    params:
-        rel_path=lambda w: w.prefix.split('/')[-1] + "_pilon/pilon.fasta"
-    shell: 'ln -s {params.rel_path} {output}'
+        '{prefix}/medaka.v.drafts.m8.agg'
+    run: 
+        from jme.jupy_tools.hit_tables import agg_hit_table, BLAST_PLUS
+        agg_hit_table(str(input), format=BLAST_PLUS) \
+                .to_csv(str(output), sep='\t', index=None)
 
-rule pilon:
+rule compare_drafts:
+    """ map polished seq agaisnt all the drafts """
     input: 
-        fasta='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.fasta',
-        indexed_bam='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.bam.bai'
-    output: 'cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}_pilon/pilon.fasta'
-    threads: 20
-    params:
-        indexed_bam='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.bam',
-        out_dir="cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}_pilon"
-    shell: "pilon --genome {input.fasta} \
-                  --bam {params.indexed_bam} \
-                   --fix bases --outdir {params.out_dir} \
-                   --threads {threads} --verbose -Xmx20g \
-                > {params.out_dir}.log \
-               2> {params.out_dir}.err"
-        
-rule index_bam:
-    input: '{prefix}.bam'
-    output: '{prefix}.bam.bai'
-    shell: 'samtools index {input}'
-
-rule bwa_mem:
-    input:
-        fastq='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.fastq',
-        idx='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.bwt'
-    output: 'cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.bam'
-    params:
-        db_name='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads'
-    threads: 20
-    shell: 'bwa mem -p -t {threads} {params.db_name} {input.fastq} \
-             | samtools view -b - \
-             | samtools sort -l 5 -@ 5 -m 10G - \
-             > {output} 2> {output}.log'
-        
-rule bwa_index:
-    input: '{name}.fasta'
-    output: '{name}.bwt'
-    log: '{name}.index.log'
-    shell: 'bwa index -p {wildcards.name} {input}'
-
-"""
-rule minimap_bam:
-    input:
-        sr='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.fastq',
-        sc_reads='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.fasta'
-    output: 'cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.bam'
-    threads: 20
+        final='{prefix}/medaka.fasta',
+        drafts='{prefix}/drafts.fasta'
+    output:
+        '{prefix}/medaka.v.drafts.m8'
+    threads: 10
     shell:
-        "minimap2 -t threads -x sr -a -o {output} {input.sc_reads} {input.sr} \
-             | samtools view -F 2308 -b - \
-             | samtools sort -l 5 -@ 5 -m 10G - \
-             > {output} 2> {output}.log"
-"""
+        """
+        lastdb -P {threads} {input.final} {input.final}
+        lastal -f blasttab+ -P {threads} {input.final} {input.drafts} > {output}
+        """
 
-rule short_read_fasta_filter:
-    input: 
-        list='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.reads',
-        sr=short_reads
-    output: 'cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.fastq'
+rule collect_drafts:
+    """ put all the drafts into a fasta file to compare with the final sequence """
+    input: lambda w: [f"{w.prefix}/draft.{n}.fasta" for n in range(RACON_ITERS + 1)]
+    output: '{prefix}/drafts.fasta'
     run:
-        with open(str(input.list)) as read_lines:
-            reads = set(l.strip() for l in read_lines)
-            
-        from Bio import SeqIO
-        with open(str(output), 'wt') as reads_out:
-            for read in SeqIO.parse(str(input.sr), 'fastq'):
-                if read.id in reads:
-                    reads_out.write(read.format('fastq'))
+        with open(str(output), 'wt') as fasta_out:
+            for draft in input:
+                for read in SeqIO.parse(str(draft), 'fasta'):
+                    read.id = os.path.basename(draft)
+                    fasta_out.write(read.format('fasta'))
 
-rule short_read_list:
-    input: 'cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.paf'
-    output: 'cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.gt{pctid_cutoff}.reads'
-    run:
-        from jme.jupy_tools.utils import parse_blast_m8, PAF
-        hits = parse_blast_m8(str(input), format=PAF).query(f'pctid >= {wildcards.pctid_cutoff}')
-        with open(str(output), 'wt') as reads_out:
-            reads_out.write("\n".join(set(hits['query'])) + "\n")
+rule minimap_4_reference:
+    """ all v all to pick a ref read """
+    input: '{prefix}/reads/subcluster.{subcluster}.fasta'
+    output: '{prefix}/subcluster.{subcluster}/all.v.all.paf'
+    threads: 10
+    shell: 'minimap2 -t {threads} -x ava-ont {input} {input} > {output}'
 
-rule minimap_paf:
+rule pick_ref_from_paf:
+    """ pippcks a ref read and splits fasta into 2 (ref and others) """
     input:
-        sr=short_reads,
-        sc_reads='cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.fasta'
-    output: 'cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.v.sr.paf'
-    threads: 20
-    shell:
-        "minimap2 -t threads -x sr -o {output} {input.sc_reads} {input.sr}"
+        paf='{prefix}/reads/subcluster.{subcluster}.fasta'
+        fasta='{prefix}/subcluster.{subcluster}/all.v.all.paf'
+    output:
+        ref='{prefix}/subcluster.{subcluster}/draft.0.fasta',
+        others='{prefix}/subcluster.{subcluster}/other_reads.fasta'
+    script: 'pick_ref_from_paf.py'        
+
+rule minimap_4_racon:
+    input:
+        draft=lambda w: f'{w.prefix}/subcluster.{w.subcluster}/draft.{int(w.racon_i) - 1}.fasta',
+        reads='{prefix}/subcluster.{subcluster}/other_reads.fasta'
+    output: "{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam"
+    threads: 10
+    shell: 'minimap2 -t {threads} -ax map-ont {input.draft} {input.reads} > {output}'
         
-rule sub_cluster_fasta:
+rule racon_iter:
     input:
-        list="cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.list",
-        fasta=cluster_reads_template
-    output: "cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.fasta"
-    shell: 'screen_list.py -k -l {input.list} {input.fasta} > {output}'
-    
-rule sub_cluster_read_list:
-    input: cluster_mcl_template
-    output: "cluster_check/cluster.{cluster_id}/sub.{sub_cluster}/reads.list"
-    shell: "head -n {wildcards.sub_cluster} {input} | tail -n 1 > {output}"
+        draft=lambda w: f'{w.prefix}/subculster.{w.subcluster}/draft.{int(w.racon_i) - 1}.fasta',
+        reads='{prefix}/subcluster.{subcluster}/other_reads.fasta',
+        sam="{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam"
+    output: '{prefix}/subcluster.{subcluster}/draft.{racon_i}.fasta'
+    threads: 10
+    shell: 'racon --include-unpolished \
+                --quality-threshold={MIN_Q} \
+                -t {threads} \
+                {input.reads} {input.sam} {input.draft} \
+                > {output}'
+
+rule medaka:
+    input:                                                                                       
+        reads='{prefix}/subcluster.{subcluster}/other_reads.fasta',
+        draft=lambda w: '{prefix}/subcluster.{subcluster}/draft.{racon_iters}.fasta' \
+                            .format(racon_iters=RACON_ITERS, **w)
+    output: '{prefix}/subcluster.{subcluster}/medaka.fasta'
+    params:                                                                                      
+        out_dir='{prefix}/subcluster.{subcluster}',
+        model=config.get('MEDAKA_model', 'r941_min_high_g303')                                                          
+    threads: 10
+    shell:                                                                                       
+        'medaka_consensus -i {input.reads} -d {input.draft} '                                
+        '-o {params.out_dir} -t {threads} -m {params.model}; '                                   
+        'mv {params.out_dir}/consensus.fasta {output}'    
+        
+ruleorder: pick_ref_from_paf > racon_iter

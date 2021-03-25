@@ -492,7 +492,7 @@ if __name__ == "__main__":
         output = snakemake.output
         params = dict(snakemake.params.items())
     except NameError:
-        # TODO: fallback to argparse if we call from the command line
+        # TODO: fallback to argparse if we call from the command line (for testing)
         import argparse
         raise Exception("Currently only works from snakemake, sorry")
 
