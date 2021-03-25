@@ -17,8 +17,10 @@ def get_subcluster_mcl_files(template):
 
 rule cluster_abc:
     """ generate hit -> query -> mfrac table for mfrac over cutoff """
-    input: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/self.m8.agg'
-    output: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/self.m8.gt{mfrac_cutoff}.abc'
+    input:
+        '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
+    output:
+        '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{mfrac_cutoff}.abc'
     run: 
         from jme.jupy_tools.utils import BLAST_PLUS
         pandas.read_csv(str(input), sep='\t') \
@@ -28,15 +30,18 @@ rule cluster_abc:
             .to_csv(str(output), sep='\t', header=None)
 
 rule agg_lastal_hits:
-    input: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/self.m8'
-    output: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/self.m8.agg'
+    input:
+        '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8'
+    output:
+        '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
     params:
         format=BLAST_PLUS
     script: 'aggregate_lastal_hits.py'
 
 rule cluster_lastal:
     input: '{output_dir}/mcl_all/reads/group.{group}/cluster.{cluster}.fasta'
-    output: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/self.m8'
+    output:
+        '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8'
     params:
         dbd='{output_dir}/mcl_all/reads/ldb/group.{group}/cluster.{cluster}.ldb'
     threads: 10
@@ -48,13 +53,17 @@ rule cluster_lastal:
         """
 
 def get_pre_filtered_clusters():
-    reads_dir = checkpoints.choose_clusters.get().output.reads
 
-    # hack to process a single group or cluster 
+    # hack to process a single cluster
     if CLUSTER >= 0:
+        logger.debug(f"skip checkpoint check and return cluster: {CLUSTER}")
         return [(GROUP, CLUSTER)]
 
+    reads_dir = checkpoints.choose_clusters.get().output.reads
+
+    # hack to process a single group
     if GROUP >= 0:
+        logger.debug(f"run checkpoint check just on group: {GROUP}")
         clusters, = glob_wildcards(reads_dir + f"/group.{GROUP}/cluster.{{cluster}}.fasta")
         return [(GROUP,c) for c in clusters]
 
@@ -69,13 +78,13 @@ checkpoint choose_clusters:
       * if it passes, write out fasta file
     """
     input:
-        mcl=f'{output_dir}/mcl_all/all.I{mcl_i}.mcl',
+        mcl=f'{WORK_DIR}/mcl_all/all.I{MCL_I}.mcl',
         fasta=ALL_FASTA,
-        summary=ALL_SUMMARY
+        read_lens=f'{WORK_DIR}/all.reads.lengths.tsv'
     output:
-        reads=directory(f'{output_dir}/mcl_all/reads'),
-        stats=f'{output_dir}/mcl_all/cluster_stats.tsv',
-        #pdf=f'{output_dir}/mcl_all/cluster_plots.pdf'
+        reads=directory(f'{WORK_DIR}/mcl_all/reads'),
+        stats=f'{WORK_DIR}/mcl_all/cluster_stats.tsv',
+        #pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf'
     params:
         sigma_cutoff=MM_SIGMA_CUTOFF,
     script: 'choose_mcl_all_clusters.py'

@@ -63,21 +63,31 @@ def get_windows():
     return windows
 
 checkpoint apply_fasta_size_window:
+    """ divide all reads into windows by size
+
+    for speed, this keeps an open handle to all output files. This may be 
+        problamatic on some systems. Look into ulimt or file a bug report
+        if you hit a limit of open file handles
+            """
     input: ALL_FASTA
     output: 
-        fasta=directory(f'{output_dir}/windows/reads'),
-        counts=f'{output_dir}/windows/read_counts.txt'
+        fasta=directory(f'{WORK_DIR}/windows/reads'),
+        counts=f'{WORK_DIR}/windows/read_counts.txt',
+        read_lens=f'{WORK_DIR}/all.reads.lengths.tsv'
     run:
         from jme.jupy_tools.utils import LogLogger
         llogger_read = LogLogger(multiplier=10)
         llogger_window = LogLogger(multiplier=2)
         handles = {}
         counts = {}
+        read_lens = {}
         os.makedirs(str(output.fasta), exist_ok=True)
         for i, read in enumerate(SeqIO.parse(str(input), 'fasta')):
             l = len(read)
             if l < MIN_SIZE:
                 continue
+
+            read_lens[read.id] = l
             
             windows = []
             
@@ -119,6 +129,10 @@ checkpoint apply_fasta_size_window:
         print(f'Closing {len(handles)} handles')
         for handle in handles.values():
             handle.close()
+
+        with open(str(output.read_lens), 'wt') as lens_out:
+            for read, length in read_lens.items():
+                lens_out.write(f"{read}\t{length}\n")
             
         with open(str(output.counts), 'wt') as counts_out:
             for window, count in counts.items():

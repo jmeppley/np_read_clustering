@@ -20,10 +20,10 @@ checkpoint choose_subclusters:
       * if it passes, write out fasta file
     """
     input:
-        fasta='{output_dir}/mcl_all/reads/group.{group}/cluster.{clutser}.fasta',
-        lastal='{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/self.m8',
-        agg='{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/self.m8.agg',
-        mcl=lambda w: SUBCLUSTER_TEMPLATE.format(**vars(), **w),
+        fasta='{output_dir}/mcl_all/reads/group.{group}/cluster.{cluster}.fasta',
+        lastal='{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8',
+        agg='{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg',
+        mcl=f'{{output_dir}}/refine_lastal/group.{{group}}/cluster.{{cluster}}/cluster.{{cluster}}.self.m8.gt{MFRAC_CUTOFF}.I{MCL_I}.mcl',
         faa='{output_dir}/mcl_all/reads/group.{group}/cluster.{cluster}.faa',
         domtbl='{output_dir}/mcl_all/reads/group.{group}/cluster.{cluster}.faa.pfam.tbl.U',
     output:

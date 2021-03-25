@@ -17,6 +17,27 @@ selected for viral-like particles.
 ### polish clusters
  * with medaka and racon
 
+## Running
+### Prerequisites
+Create a conda environment with the provided config file (env.yaml)
+
+    mamba env create -f env.yaml -p ./env
+
+### Configure
+The main point of configuration is the working directory: work_dir
+
+The only stricltly necessary input is a fasta file of all the nanopore reads. This
+is assumed to be in {work_dir}/all.reads.fasta.
+
+Specify these an any optional parameters on the command line with --configure key=value key=value ...
+
+or with a configuration file (YAML or JSON) (see the snakemake documentation)
+
+### Snakemake
+Run the workflow with snakemake:
+
+    snakemake -s np_reads_clustering --configure work_dir=clustering -j $THREADS -p
+
 ## Outputs of note
 
 From the first pass:
@@ -33,16 +54,14 @@ From polishing:
  * a final fasta file for each subcluster
 """
 
-configfile: 'config.json'
-
 ### Global Params
 MCL_I = "{:0.1f}".format(config.get('mcl_i', 5.0))
+GROUP_SIZE = config.get('group_size', 1000)
 
-GROUP_SIZE = snakemake.config.get('group_size', 1000)
 # just do one cluster (for debugging?)
 CLUSTER = config.get('cluster', -1)
 if CLUSTER >= 0:
-    GROUP = int(cluster / GROUP_SIZE)
+    GROUP = int(CLUSTER / GROUP_SIZE)
     logger.warning("Processing just one cluster: {}".format(CLUSTER))
 else:
     # just do one group (to split big DAGs)
@@ -52,11 +71,11 @@ else:
 
 ### File Locations and templates
 WORK_DIR = config.get('work_dir', 'np_clustering')
+logger.debug("Working directory is: " + WORK_DIR)
 
 
 ## STEP 1: windows -> minimap2 -> mcl
-ALL_FASTA = config['all_fasta']
-ALL_SUMMARY = config['all_summary']
+ALL_FASTA = config.get('all_fasta', f"{WORK_DIR}/all.reads.fasta")
 CLUSTER_OUT = f"{WORK_DIR}/mcl_all/all.I{MCL_I}.mcl"
 
 include: "rules/Snakefile.minimap"
@@ -86,7 +105,7 @@ include: "rules/Snakefile.polish"
 
 ## the whole enchilada
 rule finish:
-    input: get_polished_comparison_files
+    input: lambda w: get_polished_comparison_files()
 
 ## STEP 1: windows -> minimap2 -> mcl
 rule step_1:
