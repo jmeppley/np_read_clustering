@@ -99,8 +99,8 @@ rule minimap_4_reference:
 rule pick_ref_from_paf:
     """ pippcks a ref read and splits fasta into 2 (ref and others) """
     input:
-        paf='{prefix}/reads/subcluster.{subcluster}.fasta',
-        fasta='{prefix}/subcluster.{subcluster}/all.v.all.paf'
+        fasta='{prefix}/reads/subcluster.{subcluster}.fasta',
+        paf='{prefix}/subcluster.{subcluster}/all.v.all.paf'
     output:
         ref='{prefix}/subcluster.{subcluster}/draft.0.fasta',
         others='{prefix}/subcluster.{subcluster}/other_reads.fasta'
@@ -120,13 +120,14 @@ rule racon_iter:
         reads='{prefix}/subcluster.{subcluster}/other_reads.fasta',
         sam="{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam"
     output: '{prefix}/subcluster.{subcluster}/draft.{racon_i}.fasta'
-    conda: 'conda/polish.yaml'
+    conda: '../conda/polish.yaml'
     threads: 10
     shell: 'racon --include-unpolished \
                 --quality-threshold={MIN_Q} \
                 -t {threads} \
                 {input.reads} {input.sam} {input.draft} \
-                > {output}'
+                > {output} \
+				2> {output}.log'
 
 rule medaka:
     input:                                                                                       
@@ -137,11 +138,12 @@ rule medaka:
     params:                                                                                      
         out_dir='{prefix}/subcluster.{subcluster}',
         model=config.get('MEDAKA_model', 'r941_min_high_g303')                                                          
-    conda: 'conda/polish.yaml'
+    conda: '../conda/polish.yaml'
     threads: 10
     shell:                                                                                       
-        'medaka_consensus -i {input.reads} -d {input.draft} '                                
-        '-o {params.out_dir} -t {threads} -m {params.model}; '                                   
-        'mv {params.out_dir}/consensus.fasta {output}'    
+        """medaka_consensus -i {input.reads} -d {input.draft} \
+            -o {params.out_dir} -t {threads} -m {params.model} \
+			> {params.out_dir}.log 2>&1
+           mv {params.out_dir}/consensus.fasta {output}"""
         
 ruleorder: pick_ref_from_paf > racon_iter

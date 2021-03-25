@@ -1,6 +1,7 @@
 channels:
     - conda-forge
     - bioconda
+    - jmeppley
 dependencies:
     - mamba
     - last
@@ -12,3 +13,5 @@ dependencies:
     - minimap2
     - prodigal
     - hmmer
+    - py-metagenomics
+    - jupy_tools

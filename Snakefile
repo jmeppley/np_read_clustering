@@ -103,6 +103,9 @@ SUBCLUSTER_DIR_TEMPLATE = CLST_REFINE_DIR + '/subclusters/subcluster.{subcluster
 
 include: "rules/Snakefile.polish"
 
+## STEP 5: compile stats and sequences of polished seqs into a final table and fasta file
+# TODO: define final 2 files
+
 ### Entry points
 
 ## the whole enchilada
@@ -122,5 +125,6 @@ rule step_3:
     input: lambda w: get_subcluster_files(SUBCLUSTER_STATS_TEMPLATE)
 
 ## STEP 4: polish
-# just run finish (above)
+#rule step_4:
+#    input: lambda w: get_polished_comparison_files()
 
