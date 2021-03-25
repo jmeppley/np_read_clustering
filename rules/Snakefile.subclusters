@@ -7,7 +7,7 @@ def get_pre_filtered_subclusters(group, cluster):
     wildcards = dict(output_dir=WORK_DIR,
                      group=group,
                      cluster=cluster)
-    reads_dir = checkpoints.choose_subclusters.get(**wildcards).output.reads
+    reads_dir = checkpoints.choose_subclusters.get(**wildcards).output.fasta_dir
 
     subclusters, = glob_wildcards(reads_dir + "/subcluster.{subcluster}.fasta")
     return subclusters

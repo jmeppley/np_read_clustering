@@ -15,7 +15,7 @@ def get_polished_comparison_files():
 
     out_fnames = ['medaka.v.drafts.gene.lengths',
                   'medaka.v.drafts.m8.agg']
-    return [(SUBCLUSTER_DIR_TEMPLATE + "/" + fname).format(**locals()) \
+    return [(SUBCLUSTER_DIR_TEMPLATE + "/" + fname).format(WORK_DIR=WORK_DIR, **locals()) \
             for group, cluster in get_pre_filtered_clusters() \
             for subcluster in get_pre_filtered_subclusters(group, cluster) \
             for fname in out_fnames \
@@ -116,7 +116,7 @@ rule minimap_4_racon:
         
 rule racon_iter:
     input:
-        draft=lambda w: f'{w.prefix}/subculster.{w.subcluster}/draft.{int(w.racon_i) - 1}.fasta',
+        draft=lambda w: f'{w.prefix}/subcluster.{w.subcluster}/draft.{int(w.racon_i) - 1}.fasta',
         reads='{prefix}/subcluster.{subcluster}/other_reads.fasta',
         sam="{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam"
     output: '{prefix}/subcluster.{subcluster}/draft.{racon_i}.fasta'

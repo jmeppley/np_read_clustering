@@ -35,7 +35,6 @@ rule agg_lastal_hits:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8'
     output:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
-    script: '../scripts/aggregate_lastal_hits.py'
     run: 
         from jme.jupy_tools.hit_tables import agg_hit_table, BLAST_PLUS
         agg_hit_table(str(input), format=BLAST_PLUS) \
