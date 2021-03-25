@@ -38,7 +38,7 @@ checkpoint choose_subclusters:
         gene_cmap='gnuplot2',
         max_synteny_reads=15,
         read_cmap='cool'
-    script: 'scripts/choose_subclusters.py'
+    script: '../scripts/choose_subclusters.py'
 
 rule unique_pfam:
     input:

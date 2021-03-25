@@ -2,7 +2,7 @@ from Bio import SeqIO
 import numpy, pandas, os
 from scipy import stats
 from snakemake import logger
-from jme.jupy_tools.utils import BLAST_PLUS
+from jme.jupy_tools.hit_tables import BLAST_PLUS
 
 # config
 MM_SIGMA_CUTOFF = config.get('mm_sigma_cutoff', 800)  # length distribution width
@@ -22,21 +22,24 @@ rule cluster_abc:
     output:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{mfrac_cutoff}.abc'
     run: 
-        from jme.jupy_tools.utils import BLAST_PLUS
+        from jme.jupy_tools.hit_tables import BLAST_PLUS
         pandas.read_csv(str(input), sep='\t') \
             .query(f'mfrac >= {MFRAC_CUTOFF}') \
             .set_index(['query','hit']) \
             .mfrac \
             .to_csv(str(output), sep='\t', header=None)
 
+
 rule agg_lastal_hits:
     input:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8'
     output:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
-    params:
-        format=BLAST_PLUS
-    script: 'aggregate_lastal_hits.py'
+    script: '../scripts/aggregate_lastal_hits.py'
+    run: 
+        from jme.jupy_tools.hit_tables import agg_hit_table, BLAST_PLUS
+        agg_hit_table(str(input), format=BLAST_PLUS) \
+                .to_csv(str(output), sep='\t', index=None)
 
 rule cluster_lastal:
     input: '{output_dir}/mcl_all/reads/group.{group}/cluster.{cluster}.fasta'
@@ -87,4 +90,4 @@ checkpoint choose_clusters:
         #pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf'
     params:
         sigma_cutoff=MM_SIGMA_CUTOFF,
-    script: 'choose_mcl_all_clusters.py'
+    script: '../scripts/choose_mcl_all_clusters.py'

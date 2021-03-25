@@ -104,7 +104,7 @@ rule pick_ref_from_paf:
     output:
         ref='{prefix}/subcluster.{subcluster}/draft.0.fasta',
         others='{prefix}/subcluster.{subcluster}/other_reads.fasta'
-    script: 'pick_ref_from_paf.py'        
+    script: '../scripts/pick_ref_from_paf.py'        
 
 rule minimap_4_racon:
     input:
