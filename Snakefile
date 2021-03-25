@@ -26,8 +26,10 @@ Create a conda environment with the provided config file (env.yaml)
 ### Configure
 The main point of configuration is the working directory: work_dir
 
-The only stricltly necessary input is a fasta file of all the nanopore reads. This
-is assumed to be in {work_dir}/all.reads.fasta.
+The only stricltly necessary inputs are:
+
+  * a fasta file of all the nanopore reads. This is assumed to be in {work_dir}/all.reads.fasta.
+  * the PFAM HMM file (for gene annotation) (specified with pfam_hmm_path)
 
 Specify these an any optional parameters on the command line with --configure key=value key=value ...
 

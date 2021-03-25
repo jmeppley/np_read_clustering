@@ -48,13 +48,19 @@ rule unique_pfam:
     shell:
         "filter_blast_m8.py -f hmmsearchdom {input.domtbl} -U -s score  > {output.domtblU}"
 
-rule genes_pfam:
-    input:
-        faa='{prefix}/{name}.faa',
-    output: 
-        domtbl='{prefix}/{name}.faa.pfam.tbl',
-    threads: 5
-    shell: "hmmsearch --cpu {threads} --domtblout {output.domtbl} /mnt/delong/seqdbs/PFAM/33.1/Pfam-A.hmm {input.faa} > /dev/null"
+if 'pfam_hmm_path' in config:
+    rule genes_pfam:
+        input:
+            faa='{prefix}/{name}.faa',
+            hmm=config['pfam_hmm_path']
+        output: 
+            domtbl='{prefix}/{name}.faa.pfam.tbl',
+        threads: 5
+        shell: "hmmsearch --cpu {threads} --domtblout {output.domtbl} {input.hmm} {input.faa} > /dev/null"
+else:
+    rule genes_dummy_annot:
+        output: 
+            domtbl=touch('{prefix}/{name}.faa.pfam.tbl')
 
 rule prodigal:
     input: '{prefix}/{name}.fasta',

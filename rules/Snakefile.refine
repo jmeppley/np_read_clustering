@@ -24,7 +24,7 @@ rule cluster_abc:
     run: 
         from jme.jupy_tools.utils import BLAST_PLUS
         pandas.read_csv(str(input), sep='\t') \
-            .query(f'mfrac >= {mfrac_cutoff}') \
+            .query(f'mfrac >= {MFRAC_CUTOFF}') \
             .set_index(['query','hit']) \
             .mfrac \
             .to_csv(str(output), sep='\t', header=None)
