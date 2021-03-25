@@ -21,7 +21,7 @@ selected for viral-like particles.
 ### Prerequisites
 Create a conda environment with the provided config file (env.yaml)
 
-    mamba env create -f env.yaml -p ./env
+    mamba env create -f conda/snake.yaml -p ./env
 
 ### Configure
 The main point of configuration is the working directory: work_dir
@@ -36,7 +36,7 @@ or with a configuration file (YAML or JSON) (see the snakemake documentation)
 ### Snakemake
 Run the workflow with snakemake:
 
-    snakemake -s np_reads_clustering --configure work_dir=clustering -j $THREADS -p
+    snakemake -s np_reads_clustering --configure work_dir=clustering -j $THREADS -p --use-conda --conda-frontend mamba
 
 ## Outputs of note
 

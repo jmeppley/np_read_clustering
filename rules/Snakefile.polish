@@ -120,6 +120,7 @@ rule racon_iter:
         reads='{prefix}/subcluster.{subcluster}/other_reads.fasta',
         sam="{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam"
     output: '{prefix}/subcluster.{subcluster}/draft.{racon_i}.fasta'
+    conda: 'conda/polish.yaml'
     threads: 10
     shell: 'racon --include-unpolished \
                 --quality-threshold={MIN_Q} \
@@ -136,6 +137,7 @@ rule medaka:
     params:                                                                                      
         out_dir='{prefix}/subcluster.{subcluster}',
         model=config.get('MEDAKA_model', 'r941_min_high_g303')                                                          
+    conda: 'conda/polish.yaml'
     threads: 10
     shell:                                                                                       
         'medaka_consensus -i {input.reads} -d {input.draft} '                                

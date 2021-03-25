@@ -2,6 +2,7 @@ channels:
     - conda-forge
     - bioconda
 dependencies:
+    - mamba
     - last
     - snakemake-minimal
     - pandas
@@ -10,3 +11,4 @@ dependencies:
     - mcl
     - minimap2
     - prodigal
+    - hmmer
