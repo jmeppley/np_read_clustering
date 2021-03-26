@@ -20,12 +20,23 @@ rule mcl:
     shell:
         "mcl {input} --abc -I {wildcards.mcl_i} -o {output} > {output}.log 2>&1"
 
-rule all_abc:
-    """ concatenate all the ABC files into one. It's crazy, but it works. """
+rule merge_abc:
     input: lambda w: [f"{w.work_dir}/windows/cluster/window.{window}/self.abc" \
                       for window in get_windows()]
     output: "{work_dir}/mcl_all/all.abc"
-    shell: "cat {input} > {output}"
+    run:
+        # load all abc files and merge (taking the best value for each pair
+        mfrac_dict = {}
+        for window_abc in input:
+            window_mfrac = pandas.read_csv(window_abc, sep='\t', header=None, names=['query','hit','mfrac'])
+            best_mfrac = window_mfrac.groupby(['hit','query']).agg(max)
+            mfrac_dict.update(best_mfrac.mfrac.items())
+            mfrac_dict.update(((h,q),m) for (q,h),m in best_mfrac.items())
+
+        # write out merged dict
+        with open(str(output), 'wt') as abc_out:
+            for (r1, r2), mfrac in mfrac_dict.items():
+                abc_out.write(f"{r1}\t{r2}\t{mfrac:0.4f}\n")
 
 rule window_abc:
     """

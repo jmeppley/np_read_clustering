@@ -3,6 +3,7 @@ plot all the mcl clusters:
     input:
         mcl=f'{output_dir}/mcl_all/all.I{mcl_i}.mcl',
         read_lens=f'{WORK_DIR}/all.reads.lengths.tsv'
+        abc=f"{WORK_DIR}/mcl_all/all.abc"
     output:
         pdf=f'{output_dir}/mcl_all/cluster_plots.pdf'
     params:
@@ -18,3 +19,59 @@ read_lens = pandas.read_csv(snakemake.input.read_lens,
                             names=['read_id','sequence_length_template'], 
                             index_col='read_id', 
                             header=None).sequence_length_template.to_dict()
+
+# load the all.v.all mfrac values
+mfracs = pandas.read_csv(snakemake.input.abc, sep='\t',
+                         names=['q', 'h', 'mfrac'], header=None,
+                         index_col=['q','h'])
+
+
+# load the clusters
+with open(snakemake.input.mcl) as mcl_lines:
+    all_clusters = [line.strip().split() for line in mcl_lines]
+
+# plots
+pdf=PdfPages(snakemake.output.pdf)
+
+ROWS = 20
+COLS = 5
+N0=0
+
+while True:
+    clusters = all_clusters[N0:N0+ROWS*COLS]
+    rows = int(numpy.ceil(len(clusters)/COLS))
+
+    fig, axes = plt.subplots(rows, COLS*2, figsize=[COLS*4,rows], sharex=False)
+    fig.subplots_adjust(hspace=.7, wspace=.6)
+
+    cluster_iter = enumerate(clusters, start=N0)
+    axes_list = axes.flatten()
+    for i in range(0, len(axes_list), 2):
+        ax1, ax2 = axes_list[i:i+2]
+        i, cluster = next(cluster_iter)
+
+        # plot hist of pairwise mfracs
+        h = ax1.hist(get_mfracs(cluster, mfrac_dict=mfrac_dict), bins=100, range=[0,1])
+
+        # plot hist of read lens
+        cluster_lens = numpy.array([read_lens[r] for r in cluster])
+        counts, bins, h_line = ax2.hist(cluster_lens, bins=100, histtype='step')
+
+        ax2.set_ylabel(f"c{i} n={len(cluster)}")
+        if ax1 in axes[-1]:
+            xl = ax1.set_xlabel("score")
+            xl = ax2.set_xlabel("length")
+
+        # remove axes from top and right
+        for ax in [ax1, ax2]:
+            for side in ['top', 'right']:
+                ax.spines[side].set_visible(False)
+
+    pdf.savefig(bbox_inches='tight')
+    plt.close()
+
+    N0 += rows * cols
+    if len(cluster) < 10:
+        break
+pdf.close()
+

@@ -79,11 +79,12 @@ rule plot_clusters:
     """
     input:
         mcl=f'{WORK_DIR}/mcl_all/all.I{MCL_I}.mcl',
-        read_lens=f'{WORK_DIR}/all.reads.lengths.tsv'
+        read_lens=f'{WORK_DIR}/all.reads.lengths.tsv',
+        abc=f"{WORK_DIR}/mcl_all/all.abc"
     output:
         pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf'
     params:
-        sigma_cutoff=sigma_cutoff_pre,
+        sigma_cutoff=config.get('sigma_cutoff_pre',800),
         min_cl_size=MIN_POL_READS + 1,
     script: '../scripts/plot_mcl_all_clusters.py'
 
