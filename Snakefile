@@ -26,19 +26,24 @@ Create a conda environment with the provided config file (env.yaml)
 ### Configure
 The main point of configuration is the working directory: work_dir
 
-The only stricltly necessary inputs are:
+The only stricltly necessary input is:
 
-  * a fasta file of all the nanopore reads. This is assumed to be in {work_dir}/all.reads.fasta.
-  * the PFAM HMM file (for gene annotation) (specified with pfam_hmm_path)
+  * all_fasta: a fasta file of all the nanopore reads. This is assumed to be in {work_dir}/all.reads.fasta.
 
-Specify these an any optional parameters on the command line with --configure key=value key=value ...
+You may also want to specify:
+
+ * work_dir: location to create all files (defaults to 'np_clustering')
+ * name: naming prefix for the final sequences (defaults to 'SEQ')
+ * pfam_hmm_path: the PFAM HMM file (for gene annotation, pfam annotations are empyt otherwise)
+
+Specify these and any other optional parameters on the command line with --configure key=value key=value ...
 
 or with a configuration file (YAML or JSON) (see the snakemake documentation)
 
 ### Snakemake
-Run the workflow with snakemake:
+Run the workflow with snakemake. For example:
 
-    snakemake -s np_reads_clustering --configure work_dir=clustering -j $THREADS -p --use-conda --conda-frontend mamba
+    snakemake -s np_reads_clustering --config name=HOT_319 work_dir=clustering -j $THREADS -p --use-conda --conda-frontend mamba
 
 ## Outputs of note
 
@@ -54,11 +59,20 @@ From the second pass:
 
 From polishing:
  * a final fasta file for each subcluster
+ * comparison tables of predicted gene lengths for each step in polishing
+
+Final outputs:
+ * a fasta file of polished (and renamed) sequences
+ * a table of stats for these seqeunces
+ * a summary stats file with: number of clusters, number of subclusters, etc
+
 """
 
 ### Global Params
 MCL_I = "{:0.1f}".format(config.get('mcl_i', 5.0))
 GROUP_SIZE = config.get('group_size', 1000)
+NAME = config.get('name', 'SEQ')
+MIN_POL_READS = config.get('min_pol_reads', 9)
 
 # just do one cluster (for debugging?)
 CLUSTER = config.get('cluster', -1)

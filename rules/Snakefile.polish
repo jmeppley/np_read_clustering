@@ -8,41 +8,44 @@ import pandas, numpy
 RACON_ITERS = config.get('racon_iters', 3)
 MIN_Q = config.get('min_q', 9)
 
-def get_polished_comparison_files():
+def get_polished_comparison_files(kind=None):
     """ return a list of output files for the polishing step for all subclusters
     if GROUP is set (config['group']), only that group of clusters is processed """
     logger.debug("Getting output files from polishing")
 
     out_fnames = ['medaka.v.drafts.gene.lengths',
                   'medaka.v.drafts.m8.agg']
+    if kind == 'gene':
+        out_fnames = out_fnames[:1]
+
     return [(SUBCLUSTER_DIR_TEMPLATE + "/" + fname).format(WORK_DIR=WORK_DIR, **locals()) \
             for group, cluster in get_pre_filtered_clusters() \
             for subcluster in get_pre_filtered_subclusters(group, cluster) \
             for fname in out_fnames \
            ]
 
-def named_comparison_inputs(wildcards):
-    " return a namedlist of faa files from polishing drafts "
+def comparison_inputs(wildcards, as_dict=False):
+    " return a list or dict of faa files from polishing drafts "
     from snakemake.io import Namedlist
     input_dict = {'medaka': f'{wildcards.prefix}/medaka.faa'}
     for i in range(RACON_ITERS + 1):
         input_dict[f'draft_{i}'] = f'{wildcards.prefix}/draft.{i}.faa'
-    return Namedlist(fromdict=input_dict)
+    return input_dict if as_dict else input_dict.values()
 
 rule compare_genes:
     """ tabulate the number, mean length, and total AAs of predicted genes for each draft """
-    input: named_comparison_inputs
+    input: comparison_inputs
     output: '{prefix}/medaka.v.drafts.gene.lengths'
     run:
         data = []
         names = []
-        for name, faa_file in input.items():
+        for name, faa_file in comparison_inputs(wildcards, as_dict=True).items():
             lengths = []
             for gene in SeqIO.parse(faa_file, 'fasta'):
                 _, start, end, _ = gene.description.split("#", 3)
                 lengths.append(int(end) - int(start))
             lengths = numpy.array(lengths)
-            data.append(dict(mean=lengths.mean(),
+            data.append(dict(mean=numpy.round(lengths.mean(),1),
                              max=lengths.max(),
                              min=lengths.min(),
                              median=numpy.median(lengths),

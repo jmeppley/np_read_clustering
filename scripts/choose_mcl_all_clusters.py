@@ -31,6 +31,7 @@ read_lens = pandas.read_csv(snakemake.params.summary,
 cluster_data = []
 read_clusters = {}
 sigma_cutoff = snakemake.params.sigma_cutoff
+count_cutoff = snakemake.params.min_cl_size
 
 group_size = snakemake.config.get('group_size', 1000)
 
@@ -43,6 +44,7 @@ with open(str(snakemake.input.mcl)) as mcl_lines:
         
         # get cluster read names
         reads = set(line.strip().split())
+        count = len(reads)
         
         # get cluster read length dist
         cluster_lens = numpy.array([read_lens[r] for r in reads])
@@ -50,9 +52,11 @@ with open(str(snakemake.input.mcl)) as mcl_lines:
         X = numpy.array([numpy.mean((bins[j], bins[j-1])) for j in range(1,len(bins))])
         mu, sigma = stats.norm.fit(cluster_lens)
 
-        cluster_data.append(dict(num=i, count=len(reads), sigma=sigma, mu=mu))
+        keep = (sigma <= sigma_cutoff and count >= count_cutoff)
+        cluster_data.append(dict(num=i, count=count, sigma=sigma, mu=mu,
+                                 keep=keep))
 
-        if sigma <= sigma_cutoff:
+        if keep:
             """
             # write read list
             if not os.path.exists(str(snakemake.output.reads)):
@@ -110,4 +114,6 @@ for read in SeqIO.parse(snakemake.input.fasta, 'fasta'):
                 
 #TODO make the PDF at the same time
 
-pandas.DataFrame(cluster_data).to_csv(str(snakemake.output.stats), sep='\t')
+pandas.DataFrame(cluster_data).to_csv(str(snakemake.output.stats), sep='\t',
+                                      index=False)
+

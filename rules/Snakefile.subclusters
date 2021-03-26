@@ -33,7 +33,7 @@ checkpoint choose_subclusters:
         gene_pdf='{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/subclusters/cluster_synteny.pdf',
     params:
         sigma_cutoff=SIGMA_CUTOFF,
-        min_sub_size=10,
+        min_sub_size=MIN_POL_READS + 1,
         max_colored_genes=8,
         gene_cmap='gnuplot2',
         max_synteny_reads=15,

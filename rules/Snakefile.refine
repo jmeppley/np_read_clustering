@@ -89,4 +89,5 @@ checkpoint choose_clusters:
         #pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf'
     params:
         sigma_cutoff=MM_SIGMA_CUTOFF,
+        min_cl_size=MIN_POL_READS + 1,
     script: '../scripts/choose_mcl_all_clusters.py'
