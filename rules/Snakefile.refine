@@ -49,7 +49,7 @@ rule cluster_lastal:
     threads: 10
     shell:
         """
-        mkdir {params.dbd}
+        mkdir -p {params.dbd}
         lastdb -P {threads} {params.dbd}/lastdb {input}
         lastal -f blasttab+ -P {threads} {params.dbd}/lastal {input} > {output} 2> {output}.log
         """

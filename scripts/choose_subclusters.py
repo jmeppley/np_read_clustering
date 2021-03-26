@@ -356,7 +356,7 @@ def plot_subcluster_genes(subcluster_id, subcluster_names, read_genes_tables, re
     M = params.get('max_synteny_reads', 20)
     def count_top_pfams_in_read(read):
         if read in read_genes_tables:
-            return sum(1 for p in read_genes_tables[r].pfam.values
+            return sum(1 for p in read_genes_tables[read].pfam.values
                        if p in top_N_pfams)
         return 0
     top_M_reads = sorted(subcluster_names, 
