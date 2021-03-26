@@ -70,20 +70,13 @@ Final outputs:
 
 ### Global Params
 MCL_I = "{:0.1f}".format(config.get('mcl_i', 5.0))
-GROUP_SIZE = config.get('group_size', 1000)
 NAME = config.get('name', 'SEQ')
 MIN_POL_READS = config.get('min_pol_reads', 9)
 
-# just do one cluster (for debugging?)
-CLUSTER = config.get('cluster', -1)
-if CLUSTER >= 0:
-    GROUP = int(CLUSTER / GROUP_SIZE)
-    logger.warning("Processing just one cluster: {}".format(CLUSTER))
-else:
-    # just do one group (to split big DAGs)
-    GROUP = config.get('group', -1)
-    if GROUP >= 0:
-        logger.warning("Processing group: {}".format(GROUP))
+# just do one group (to split big DAGs)
+GROUP = config.get('group', -1)
+if GROUP >= 0:
+    logger.warning("Processing group: {}".format(GROUP))
 
 ### File Locations and templates
 WORK_DIR = config.get('work_dir', 'np_clustering')
@@ -93,6 +86,7 @@ logger.debug("Working directory is: " + WORK_DIR)
 ## STEP 1: windows -> minimap2 -> mcl
 ALL_FASTA = config.get('all_fasta', f"{WORK_DIR}/all.reads.fasta")
 CLUSTER_OUT = f"{WORK_DIR}/mcl_all/all.I{MCL_I}.mcl"
+CLUSTER_STATS=f'{WORK_DIR}/mcl_all/cluster_stats.tsv'
 
 include: "rules/Snakefile.minimap"
 
@@ -124,11 +118,13 @@ include: "rules/Snakefile.polish"
 
 ## the whole enchilada
 rule finish:
-    input: lambda w: get_polished_comparison_files()
+    input:
+        polished=lambda w: get_polished_comparison_files(),
+        clusters_pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',
 
 ## STEP 1: windows -> minimap2 -> mcl
 rule step_1:
-    input: CLUSTER_OUT
+    input: CLUSTER_STATS
 
 ## STEP 2: filter -> lastal -> mcl
 rule step_2:

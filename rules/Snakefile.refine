@@ -72,6 +72,21 @@ def get_pre_filtered_clusters():
     groups, clusters, = glob_wildcards(reads_dir + "/group.{group}/cluster.{cluster}.fasta")
     return [(g,c) for g,c in zip(groups, clusters)]
 
+rule plot_clusters:
+    """
+    Do this separately, so that the workflow can continue while the plots 
+    happen. (The plots are slow).
+    """
+    input:
+        mcl=f'{WORK_DIR}/mcl_all/all.I{MCL_I}.mcl',
+        read_lens=f'{WORK_DIR}/all.reads.lengths.tsv'
+    output:
+        pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf'
+    params:
+        sigma_cutoff=sigma_cutoff_pre,
+        min_cl_size=MIN_POL_READS + 1,
+    script: '../scripts/plot_mcl_all_clusters.py'
+
 checkpoint choose_clusters:
     """
     Go through mcl file. For each cluster:
@@ -86,7 +101,6 @@ checkpoint choose_clusters:
     output:
         reads=directory(f'{WORK_DIR}/mcl_all/reads'),
         stats=f'{WORK_DIR}/mcl_all/cluster_stats.tsv',
-        #pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf'
     params:
         sigma_cutoff=MM_SIGMA_CUTOFF,
         min_cl_size=MIN_POL_READS + 1,

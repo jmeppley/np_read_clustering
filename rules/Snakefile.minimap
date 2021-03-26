@@ -124,8 +124,8 @@ checkpoint apply_fasta_size_window:
                 window_start = window_num * WINDOW_SPACING
             
             llogger_read.log("wrote read %d (%s) of len %d to window %s", (i, read.id, l, windows))
-            
-        
+
+
         print(f'Closing {len(handles)} handles')
         for handle in handles.values():
             handle.close()
@@ -133,7 +133,7 @@ checkpoint apply_fasta_size_window:
         with open(str(output.read_lens), 'wt') as lens_out:
             for read, length in read_lens.items():
                 lens_out.write(f"{read}\t{length}\n")
-            
+
         with open(str(output.counts), 'wt') as counts_out:
             for window, count in counts.items():
                 counts_out.write(f"{window}\t{count}\n")
