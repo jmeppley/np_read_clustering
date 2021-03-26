@@ -51,7 +51,7 @@ rule cluster_lastal:
         """
         mkdir -p {params.dbd}
         lastdb -P {threads} {params.dbd}/lastdb {input}
-        lastal -f blasttab+ -P {threads} {params.dbd}/lastal {input} > {output} 2> {output}.log
+        lastal -f blasttab+ -P {threads} {params.dbd}/lastdb {input} > {output} 2> {output}.log
         """
 
 def get_pre_filtered_clusters():

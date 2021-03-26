@@ -411,29 +411,33 @@ def plot_subcluster_genes(subcluster_id, subcluster_names, read_genes_tables, re
     prev_read = None
     for name in top_M_reads:
         read = subcluster_names[name]
-        gene_table = read_genes_tables[name]
         read_length = read_lens[name]
+        if name in read_genes_tables:
 
-        # do we want to flip the read dir? (too many strand < 1)
-        reverse = gene_table.eval('glen = strand * (end - start)').glen.sum() < 1
+            gene_table = read_genes_tables[name]
 
-        # draw genes
-        for start, end, strand, pfam in gene_table[['start','end','strand','pfam']].values:
-            if reverse:
-                strand = -1 * strand
-                start = read_length - start
-                end = read_length - end
+            # do we want to flip the read dir? (too many strand < 1)
+            reverse = gene_table.eval('glen = strand * (end - start)').glen.sum() < 1
 
-            strand = int(strand)
-            hl = min(head_length, end-start)
-            al = max((end - start) - hl, .0001) * strand
-            ast = start if al > 0 else end
-            color = gene_color_dict.get(pfam, 'k')
-            plt.arrow(ast, y, al, 0, fc=color, ec=color, 
-                      lw=0,
-                      width=thickness, head_width=thickness, 
-                      head_length=hl, 
-                      head_starts_at_zero=(int(strand) > 0))
+            # draw genes
+            for start, end, strand, pfam in gene_table[['start','end','strand','pfam']].values:
+                if reverse:
+                    strand = -1 * strand
+                    start = read_length - start
+                    end = read_length - end
+
+                strand = int(strand)
+                hl = min(head_length, end-start)
+                al = max((end - start) - hl, .0001) * strand
+                ast = start if al > 0 else end
+                color = gene_color_dict.get(pfam, 'k')
+                plt.arrow(ast, y, al, 0, fc=color, ec=color, 
+                          lw=0,
+                          width=thickness, head_width=thickness, 
+                          head_length=hl, 
+                          head_starts_at_zero=(int(strand) > 0))
+        else:
+            reverse=False
 
         # connect matched segments for read pairs
         if prev_read is not None:
