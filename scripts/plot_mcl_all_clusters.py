@@ -11,8 +11,11 @@ plot all the mcl clusters:
         min_cl_size=MIN_POL_READS + 1,
 """
 import pandas, numpy, os
+from scipy import stats
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+
+count_cutoff = snakemake.params.min_cl_size
 
 # load the read lengths from the summary file
 read_lens = pandas.read_csv(snakemake.input.read_lens,
@@ -22,9 +25,9 @@ read_lens = pandas.read_csv(snakemake.input.read_lens,
                             header=None).sequence_length_template.to_dict()
 
 # load the all.v.all mfrac values
-mfracs = pandas.read_csv(snakemake.input.abc, sep='\t',
-                         names=['q', 'h', 'mfrac'], header=None,
-                         index_col=['q','h'])
+mfrac_dict = pandas.read_csv(snakemake.input.abc, sep='\t',
+                             names=['q', 'h', 'mfrac'], header=None,
+                             index_col=['q','h']).mfrac.to_dict()
 
 def get_mfracs(reads, mfrac_dict=mfrac_dict):
     return [mfrac_dict.get((r1, r2), 0)
@@ -62,6 +65,17 @@ while True:
         # plot hist of read lens
         cluster_lens = numpy.array([read_lens[r] for r in cluster])
         counts, bins, h_line = ax2.hist(cluster_lens, bins=100, histtype='step')
+        X = numpy.array([numpy.mean((bins[j], bins[j-1])) for j in range(1,len(bins))])
+        mu, sigma = stats.norm.fit(cluster_lens)
+
+        # overlay norm dist
+        best_fit_line = stats.norm.pdf(X, mu, sigma)
+        best_fit_line = best_fit_line * counts.sum() / best_fit_line.sum()
+        p = ax2.plot(X, best_fit_line, color='red', alpha=.5)
+
+        keep = (sigma <= sigma_cutoff and count >= count_cutoff)
+        if keep:
+            ax1.set_ylabel('keep')
 
         ax2.set_ylabel(f"c{i} n={len(cluster)}")
         if ax1 in axes[-1]:
@@ -76,8 +90,8 @@ while True:
     pdf.savefig(bbox_inches='tight')
     plt.close()
 
-    N0 += rows * cols
-    if len(cluster) < 10:
+    N0 += ROWS * COLS
+    if len(cluster) < count_cutoff:
         break
 pdf.close()
 

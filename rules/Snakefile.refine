@@ -61,12 +61,6 @@ rule cluster_lastal:
         """
 
 def get_pre_filtered_clusters():
-
-    # hack to process a single cluster
-    if CLUSTER >= 0:
-        logger.debug(f"skip checkpoint check and return cluster: {CLUSTER}")
-        return [(GROUP, CLUSTER)]
-
     reads_dir = checkpoints.choose_clusters.get().output.reads
 
     # hack to process a single group

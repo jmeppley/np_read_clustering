@@ -10,12 +10,13 @@ rule compile_final_seqs:
     run:
         stats = {}
         files = {}
+        groups = {}
         
         # get fasta files and gene stats
         for sc_comp_file in input:
             sc_dir = os.path.dirname(sc_comp_file)
-            cluster, subcluster = \
-                re.search(r'cluster\.(\d+).+subcluster\.(\d+)', sc_dir).groups()
+            group, cluster, subcluster = \
+                re.search(r'group.(\d+).+cluster\.(\d+).+subcluster\.(\d+)', sc_dir).groups()
             cl_sc_id = f"{cluster}_{subcluster}"
             files[cl_sc_id] = dict(
                 fasta=sc_dir + "/medaka.fasta",
@@ -28,12 +29,13 @@ rule compile_final_seqs:
                       .loc['medaka']
             stats.setdefault(cluster, {}).setdefault(subcluster) = \
                 {f"gene_{k}": v for k,v in gene_stats.items()}
+            groups[cluster] = group
 
         # get read len stats for subclusters
         for cluster in stats:
             sc_tsv = SUBCLUSTER_STATS_TEMPLATE.format(WORK_DIR=WORK_DIR,
                                                       cluster=cluster,
-                                                      group=int(cluster/GROUP_SIZE))
+                                                      group=groups[cluster])
             sc_stats = pandas.read_csv(sc_tsv, sep='\t')
             for sc, row in sc_stats.iterrows():
                 stats[cluster][str(sc)].update(dict(

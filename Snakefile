@@ -139,4 +139,3 @@ rule step_3:
 ## STEP 4: polish
 rule step_4:
     input: lambda w: get_polished_comparison_files()
-
