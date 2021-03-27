@@ -15,6 +15,7 @@ from scipy import stats
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
+sigma_cutoff = snakemake.params.sigma_cutoff
 count_cutoff = snakemake.params.min_cl_size
 
 # load the read lengths from the summary file
@@ -73,7 +74,7 @@ while True:
         best_fit_line = best_fit_line * counts.sum() / best_fit_line.sum()
         p = ax2.plot(X, best_fit_line, color='red', alpha=.5)
 
-        keep = (sigma <= sigma_cutoff and count >= count_cutoff)
+        keep = (sigma <= sigma_cutoff and len(cluster) >= count_cutoff)
         if keep:
             ax1.set_ylabel('keep')
 
