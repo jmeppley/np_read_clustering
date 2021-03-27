@@ -12,6 +12,7 @@ plot all the mcl clusters:
 """
 import pandas, numpy, os
 from matplotlib import pyplot as plt
+from matplotlib.backends.backend_pdf import PdfPages
 
 # load the read lengths from the summary file
 read_lens = pandas.read_csv(snakemake.input.read_lens,
@@ -25,7 +26,12 @@ mfracs = pandas.read_csv(snakemake.input.abc, sep='\t',
                          names=['q', 'h', 'mfrac'], header=None,
                          index_col=['q','h'])
 
-
+def get_mfracs(reads, mfrac_dict=mfrac_dict):
+    return [mfrac_dict.get((r1, r2), 0)
+            for r1 in reads
+            for r2 in reads
+            if r2 > r1
+           ]
 # load the clusters
 with open(snakemake.input.mcl) as mcl_lines:
     all_clusters = [line.strip().split() for line in mcl_lines]

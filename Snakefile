@@ -124,7 +124,9 @@ rule finish:
 
 ## STEP 1: windows -> minimap2 -> mcl
 rule step_1:
-    input: CLUSTER_STATS
+    input:
+        stats=CLUSTER_STATS,
+        pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',
 
 ## STEP 2: filter -> lastal -> mcl
 rule step_2:
@@ -135,6 +137,6 @@ rule step_3:
     input: lambda w: get_subcluster_files(SUBCLUSTER_STATS_TEMPLATE)
 
 ## STEP 4: polish
-#rule step_4:
-#    input: lambda w: get_polished_comparison_files()
+rule step_4:
+    input: lambda w: get_polished_comparison_files()
 

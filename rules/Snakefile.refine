@@ -21,6 +21,8 @@ rule cluster_abc:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
     output:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{mfrac_cutoff}.abc'
+    benchmark:
+        '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{mfrac_cutoff}.abc.time'
     run: 
         from jme.jupy_tools.hit_tables import BLAST_PLUS
         pandas.read_csv(str(input), sep='\t') \
@@ -35,6 +37,8 @@ rule agg_lastal_hits:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8'
     output:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
+    benchmark:
+        '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg.time'
     run: 
         from jme.jupy_tools.hit_tables import agg_hit_table, BLAST_PLUS
         agg_hit_table(str(input), format=BLAST_PLUS) \
@@ -44,6 +48,8 @@ rule cluster_lastal:
     input: '{output_dir}/mcl_all/reads/group.{group}/cluster.{cluster}.fasta'
     output:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8'
+    benchmark:
+        '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.time'
     params:
         dbd='{output_dir}/mcl_all/reads/ldb/group.{group}/cluster.{cluster}.ldb'
     threads: 10
@@ -83,6 +89,7 @@ rule plot_clusters:
         abc=f"{WORK_DIR}/mcl_all/all.abc"
     output:
         pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf'
+    benchmark: f'{WORK_DIR}/mcl_all/cluster_plots.pdf.time'
     params:
         sigma_cutoff=config.get('sigma_cutoff_pre',800),
         min_cl_size=MIN_POL_READS + 1,
@@ -102,6 +109,7 @@ checkpoint choose_clusters:
     output:
         reads=directory(f'{WORK_DIR}/mcl_all/reads'),
         stats=f'{WORK_DIR}/mcl_all/cluster_stats.tsv',
+    benchmark: f'{WORK_DIR}/mcl_all/reads.time'
     params:
         sigma_cutoff=MM_SIGMA_CUTOFF,
         min_cl_size=MIN_POL_READS + 1,

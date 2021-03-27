@@ -17,13 +17,16 @@ rule all:
 rule mcl:
     input: '{file_root}.abc'
     output: '{file_root}.I{mcl_i}.mcl'
+    benchmark: '{file_root}.I{mcl_i}.mcl.time'
+    threads: 19
     shell:
-        "mcl {input} --abc -I {wildcards.mcl_i} -o {output} > {output}.log 2>&1"
+        "mcl {input} --abc -te {threads} -I {wildcards.mcl_i} -o {output} > {output}.log 2>&1"
 
 rule merge_abc:
     input: lambda w: [f"{w.work_dir}/windows/cluster/window.{window}/self.abc" \
                       for window in get_windows()]
     output: "{work_dir}/mcl_all/all.abc"
+    benchmark: "{work_dir}/mcl_all/all.abc.time"
     run:
         # load all abc files and merge (taking the best value for each pair
         mfrac_dict = {}
@@ -31,7 +34,7 @@ rule merge_abc:
             window_mfrac = pandas.read_csv(window_abc, sep='\t', header=None, names=['query','hit','mfrac'])
             best_mfrac = window_mfrac.groupby(['hit','query']).agg(max)
             mfrac_dict.update(best_mfrac.mfrac.items())
-            mfrac_dict.update(((h,q),m) for (q,h),m in best_mfrac.items())
+            mfrac_dict.update(((h,q),m) for (q,h),m in best_mfrac.mfrac.items())
 
         # write out merged dict
         with open(str(output), 'wt') as abc_out:
@@ -45,6 +48,7 @@ rule window_abc:
     """
     input: '{output_dir}/windows/cluster/window.{window}/self.paf'
     output: '{output_dir}/windows/cluster/window.{window}/self.abc'
+    benchmark: '{output_dir}/windows/cluster/window.{window}/self.abc.time'
     run:
         from jme.jupy_tools.hit_tables import agg_hit_table, PAF
         paf_file = str(input)
@@ -62,6 +66,7 @@ rule window_abc:
 rule window_minimap:
     input: '{output_dir}/windows/reads/reads.{window}.fasta'
     output: '{output_dir}/windows/cluster/window.{window}/self.paf'
+    benchmark: '{output_dir}/windows/cluster/window.{window}/self.paf.time'
     threads: 10
     shell:
         """
@@ -85,6 +90,7 @@ checkpoint apply_fasta_size_window:
         fasta=directory(f'{WORK_DIR}/windows/reads'),
         counts=f'{WORK_DIR}/windows/read_counts.txt',
         read_lens=f'{WORK_DIR}/all.reads.lengths.tsv'
+    benchmark: f'{WORK_DIR}/all.reads.lengths.tsv.time'
     run:
         from jme.jupy_tools.utils import LogLogger
         llogger_read = LogLogger(multiplier=10)

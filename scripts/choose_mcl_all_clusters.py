@@ -81,14 +81,14 @@ num_keepers = keepers.shape[0]
 if 'group_size' in snakemake.config and 'num_groups' not in snakemake.config:
     group_size = snakemake.config['group_size']
     n_groups = int(numpy.ceil(num_keepers/group_size))
-elif:
+else:
     n_groups = snakemake.config.get('num_groups', 100)
 
 # assigne a group to each cluster (round-robin)
 groups = cycle(range(n_groups))
 cluster_groups = {c:next(groups) for c in keepers['num']}
 cluster_table['group'] = [cluster_groups.get(c,None)
-                          for c in cluster_table['num']
+                          for c in cluster_table['num']]
 
 # save cluster table
 cluster_table.to_csv(str(snakemake.output.stats), sep='\t',
@@ -127,7 +127,7 @@ def open_cluster_fasta(i):
     fasta_file = f"{snakemake.output.reads}/group.{group}/cluster.{i}.fasta"
     fd = os.path.dirname(fasta_file)
     if not os.path.exists(fd):
-        os.path.makedirs(fd)
+        os.makedirs(fd)
     handle = open(fasta_file, 'at')
     handles[i] = handle
     open_handle_ids.append(i)
