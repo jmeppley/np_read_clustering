@@ -119,6 +119,7 @@ include: "rules/Snakefile.polish"
 
 ## STEP 5: compile stats and sequences of polished seqs into a final table and fasta file
 POL_SEQS = f"{WORK_DIR}/final/polished.seqs.fasta",
+REPORT_FILE = f"{WORK_DIR}/final/report.txt"
 
 include: "rules/Snakefile.finish"
 

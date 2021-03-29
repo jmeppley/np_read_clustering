@@ -44,14 +44,18 @@ rule compare_genes:
             for gene in SeqIO.parse(faa_file, 'fasta'):
                 _, start, end, _ = gene.description.split("#", 3)
                 lengths.append(int(end) - int(start))
-            lengths = numpy.array(lengths)
-            data.append(dict(mean=numpy.round(lengths.mean(),1),
-                             max=lengths.max(),
-                             min=lengths.min(),
-                             median=numpy.median(lengths),
-                             num=len(lengths),
-                             total=lengths.sum()
-                            ))
+            if len(lengths) > 0:
+                lengths = numpy.array(lengths)
+                data.append(dict(mean=numpy.round(lengths.mean(),1),
+                                 max=lengths.max(),
+                                 min=lengths.min(),
+                                 median=numpy.median(lengths),
+                                 num=len(lengths),
+                                 total=lengths.sum()
+                                ))
+            else:
+                data.append({k:0 for k in
+                ['mean','max','min','median','num','total']})
             names.append(name)
         stats = pandas.DataFrame(data, index=names)
         stats.sort_index().to_csv(str(output), sep='\t')            

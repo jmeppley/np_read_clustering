@@ -1,3 +1,22 @@
+import pandas
+
+SIGMA_CUTOFF = config.get('sigma_cutoff', 500)
+
+def get_sc_stats_files(w, as_dict=False):
+    """ Find all the stats files for subcluster choosing (one for each kept
+    cluster)
+
+    Return a list if called from input, and dict for the python code
+    """
+    sc_stats = \
+        {cluster: f'{WORK_DIR}/refine_lastal/group.{group}/cluster.{cluster}/subclusters/cluster_stats.tsv'
+         for group, cluster in get_pre_filtered_clusters()}
+
+    if as_dict:
+        return sc_stats
+    return sc_stats.values()
+
+
 rule compile_report:
     """
     generate a short report with:
@@ -10,11 +29,46 @@ rule compile_report:
     input:
         pol_stats=f"{WORK_DIR}/final/polished.seqs.stats.tsv",
         mcl_stats=f'{WORK_DIR}/mcl_all/cluster_stats.tsv',
+        sc_stats=get_sc_stats_files,
     output:
         report=REPORT_FILE
-    shell:
-        "echo"
-        #TODO
+    run:
+        with open(str(output.report), 'wt') as output_handle:
+            cluster_stats = pandas.read_csv(str(input.mcl_stats), sep='\t',
+                                            index_col=0)
+            n_clusters = cluster_stats.shape[0]
+            n_gt_size_cutoff = clusters.query(f'count >= {MIN_POL_READS}').shape[0]
+            n_kept = cluster.query('keep').shape[0]
+
+            output_handle.write(f"Cluster Search Results:\n"
+                                f"  minimap2 clusters:\n"
+                                f"    clusters: {n_clusters}\n"
+                                f"    gt_{MIN_POL_READS}: {n_gt_size_cutoff}\n"
+                                f"    kept_clusters: {n_kept}\n\n")
+
+            n_sc, n_sc_gt_cutoff, n_sc_kept = 0, 0, 0
+            for sc_stats_file in input.sc_stats:
+                sc_stats = pandas.read_csv(sc_stats_file, sep='\t', index_col=0)
+                n_sc += sc_stats.shape[0]
+                sc_gt_cutoff = sc_stats.query(f'N >= {MIN_POL_READS}')
+                n_sc_gt_cutoff += sc_gt_cutoff.shape[0]
+                n_sc_kept += sc_gt_cutoff.query(f'sigma <= {SIGMA_CUTOFF}').shape[0]
+
+            output_handle.write(f"  lastal subclusters:\n"
+                                f"    subclusters: {n_sc}\n"
+                                f"    gt_{MIN_POL_READS}: {n_sc_gt_cutoff}\n"
+                                f"    kept_subclusters: {n_sc_kept}\n\n")
+        
+            pol_stats = pandas.read_csv(str(input.pol_stats), sep='\t', index_col=0)
+            pol_lens = pol_stats['length'].values
+
+            output_handle.write(f"  polished seqs:\n"
+                                f"    count: {len(pol_lens)}\n"
+                                f"    mean: {pol_lens.mean()}\n"
+                                f"    max: {pol_lens.max()}\n"
+                                f"    min: {pol_lens.min()}\n"
+                                f"    median: {numpy.median(pol_lens)}\n"
+                                f"    stddev: {pol_len.std()}\n\n")
 
 
 rule compile_final_seqs:
@@ -29,12 +83,16 @@ rule compile_final_seqs:
     run:
         stats = {}
         files = {}
+        groups = {}
         
+        logger.debug("Collecting polished sequences")
+
         # get fasta files and gene stats
         for sc_comp_file in input:
+            logger.debug("subcluster file: " + sc_comp_file)
             sc_dir = os.path.dirname(sc_comp_file)
-            cluster, subcluster = \
-                re.search(r'cluster\.(\d+).+subcluster\.(\d+)', sc_dir).groups()
+            group, cluster, subcluster = \
+                re.search(r'group.(\d+).+cluster\.(\d+).+subcluster\.(\d+)', sc_dir).groups()
             cl_sc_id = f"{cluster}_{subcluster}"
             files[cl_sc_id] = dict(
                 fasta=sc_dir + "/medaka.fasta",
@@ -45,14 +103,17 @@ rule compile_final_seqs:
                                 sep='\t',
                                 index_col=0) \
                       .loc['medaka']
-            stats.setdefault(cluster, {}).setdefault(subcluster) = \
+            stats.setdefault(cluster, {})[subcluster] = \
                 {f"gene_{k}": v for k,v in gene_stats.items()}
+            groups[cluster] = group
+
+        logger.debug("Found {len(files)} poilished seqs from {len(stats)} clusters")
 
         # get read len stats for subclusters
         for cluster in stats:
             sc_tsv = SUBCLUSTER_STATS_TEMPLATE.format(WORK_DIR=WORK_DIR,
                                                       cluster=cluster,
-                                                      group=int(cluster/GROUP_SIZE))
+                                                      group=groups[cluster])
             sc_stats = pandas.read_csv(sc_tsv, sep='\t')
             for sc, row in sc_stats.iterrows():
                 stats[cluster][str(sc)].update(dict(
@@ -61,7 +122,7 @@ rule compile_final_seqs:
                     read_count=row['N']))
 
         # convert stats to table
-        df = pandas.DataFrame({f"{cl}_{sc}": sc_statts
+        df = pandas.DataFrame({f"{cl}_{sc}": sc_stats
                             for cl, cl_stats in stats.items()
                             for sc, sc_stats in cl_stats.items()},) \
                 .T
