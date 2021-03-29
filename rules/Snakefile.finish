@@ -31,7 +31,7 @@ rule compile_report:
         mcl_stats=f'{WORK_DIR}/mcl_all/cluster_stats.tsv',
         sc_stats=get_sc_stats_files,
     params:
-        min_pol_reads=MIN_POL_READS,
+        min_cl_size=MIN_POL_READS + 1,
         sigma_cutoff=SIGMA_CUTOFF
     output:
         report=REPORT_FILE

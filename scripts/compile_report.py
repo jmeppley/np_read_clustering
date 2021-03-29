@@ -13,7 +13,7 @@ From snakemake:
     output:
         report=REPORT_FILE,
     params:
-        min_pol_reads=MIN_POL_READS,
+        min_cl_size=MIN_POL_READS + 1,
         sigma_cutoff=SIGMA_CUTOFF
 """
 import pandas, numpy
@@ -23,26 +23,26 @@ def main(input, output, params):
         cluster_stats = pandas.read_csv(str(input.mcl_stats), sep='\t',
                                         index_col=0)
         n_clusters = cluster_stats.shape[0]
-        n_gt_size_cutoff = cluster_stats.query(f'count >= {params.min_pol_reads}').shape[0]
+        n_gt_size_cutoff = cluster_stats.query(f'count >= {params.min_cl_size}').shape[0]
         n_kept = cluster_stats.query('keep').shape[0]
 
         output_handle.write(f"Cluster Search Results:\n"
                             f"  minimap2 clusters:\n"
                             f"    clusters: {n_clusters}\n"
-                            f"    gt_{params.min_pol_reads}: {n_gt_size_cutoff}\n"
+                            f"    gt_{params.min_cl_size}: {n_gt_size_cutoff}\n"
                             f"    kept_clusters: {n_kept}\n\n")
 
         n_sc, n_sc_gt_cutoff, n_sc_kept = 0, 0, 0
         for sc_stats_file in input.sc_stats:
             sc_stats = pandas.read_csv(sc_stats_file, sep='\t', index_col=0)
             n_sc += sc_stats.shape[0]
-            sc_gt_cutoff = sc_stats.query(f'N >= {params.min_pol_reads}')
+            sc_gt_cutoff = sc_stats.query(f'N >= {params.min_cl_size}')
             n_sc_gt_cutoff += sc_gt_cutoff.shape[0]
             n_sc_kept += sc_gt_cutoff.query(f'sigma <= {params.sigma_cutoff}').shape[0]
 
         output_handle.write(f"  lastal subclusters:\n"
                             f"    subclusters: {n_sc}\n"
-                            f"    gt_{params.min_pol_reads}: {n_sc_gt_cutoff}\n"
+                            f"    gt_{params.min_cl_size}: {n_sc_gt_cutoff}\n"
                             f"    kept_subclusters: {n_sc_kept}\n\n")
     
         pol_stats = pandas.read_csv(str(input.pol_stats), sep='\t', index_col=0)
