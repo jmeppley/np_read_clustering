@@ -112,14 +112,15 @@ SUBCLUSTER_DIR_TEMPLATE = CLST_REFINE_DIR + '/subclusters/subcluster.{subcluster
 include: "rules/Snakefile.polish"
 
 ## STEP 5: compile stats and sequences of polished seqs into a final table and fasta file
-# TODO: define final 2 files
+REPORT_FILE = f"{WORK_DIR}/final/report.txt"
+include: "rules/Snakefile.finish"
 
 ### Entry points
 
 ## the whole enchilada
 rule finish:
     input:
-        polished=lambda w: get_polished_comparison_files(),
+        report=REPORT_FILE,
         clusters_pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',
 
 ## STEP 1: windows -> minimap2 -> mcl
@@ -138,4 +139,6 @@ rule step_3:
 
 ## STEP 4: polish
 rule step_4:
-    input: lambda w: get_polished_comparison_files()
+    input:
+        polished=lambda w: get_polished_comparison_files(),
+        clusters_pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',

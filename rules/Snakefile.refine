@@ -67,9 +67,11 @@ def get_pre_filtered_clusters():
     if GROUP >= 0:
         logger.debug(f"run checkpoint check just on group: {GROUP}")
         clusters, = glob_wildcards(reads_dir + f"/group.{GROUP}/cluster.{{cluster}}.fasta")
+        logger.debug(f"Found {len(clusters)} clusters in group {GROUP}")
         return [(GROUP,c) for c in clusters]
 
     groups, clusters, = glob_wildcards(reads_dir + "/group.{group}/cluster.{cluster}.fasta")
+    logger.debug(f"Found {len(clusters)} cluster in {len(set(groups))} groups")
     return [(g,c) for g,c in zip(groups, clusters)]
 
 rule plot_clusters:

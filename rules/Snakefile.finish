@@ -1,3 +1,43 @@
+import pandas
+
+SIGMA_CUTOFF = config.get('sigma_cutoff', 500)
+
+def get_sc_stats_files(w, as_dict=False):
+    """ Find all the stats files for subcluster choosing (one for each kept
+    cluster)
+
+    Return a list if called from input, and dict for the python code
+    """
+    sc_stats = \
+        {cluster: f'{WORK_DIR}/refine_lastal/group.{group}/cluster.{cluster}/subclusters/cluster_stats.tsv'
+         for group, cluster in get_pre_filtered_clusters()}
+
+    if as_dict:
+        return sc_stats
+    return sc_stats.values()
+
+
+rule compile_report:
+    """
+    generate a short report with:
+     * number of size windows
+     * number of clusters (and # > 10 and number kept)
+     * number of subclusters (and # > 10 and number kept)
+     * number of polished seqs (with length stats)
+     
+    """
+    input:
+        pol_stats=f"{WORK_DIR}/final/polished.seqs.stats.tsv",
+        mcl_stats=f'{WORK_DIR}/mcl_all/cluster_stats.tsv',
+        sc_stats=get_sc_stats_files,
+    params:
+        min_pol_reads=MIN_POL_READS,
+        sigma_cutoff=SIGMA_CUTOFF
+    output:
+        report=REPORT_FILE
+    script: "../scripts/compile_report.py"
+
+
 rule compile_final_seqs:
     """
     Collect polished sequences and stats
@@ -7,66 +47,7 @@ rule compile_final_seqs:
         fasta=f"{WORK_DIR}/final/polished.seqs.fasta",
         faa=f"{WORK_DIR}/final/polished.seqs.faa",
         stats=f"{WORK_DIR}/final/polished.seqs.stats.tsv"
-    run:
-        stats = {}
-        files = {}
-        groups = {}
-        
-        # get fasta files and gene stats
-        for sc_comp_file in input:
-            sc_dir = os.path.dirname(sc_comp_file)
-            group, cluster, subcluster = \
-                re.search(r'group.(\d+).+cluster\.(\d+).+subcluster\.(\d+)', sc_dir).groups()
-            cl_sc_id = f"{cluster}_{subcluster}"
-            files[cl_sc_id] = dict(
-                fasta=sc_dir + "/medaka.fasta",
-                faa  =sc_dir + "/medaka.faa"
-            )
-            gene_stats = \
-                pandas.read_csv(sc_dir + "/medaka.v.drafts.gene.lengths",
-                                sep='\t',
-                                index_col=0) \
-                      .loc['medaka']
-            stats.setdefault(cluster, {}).setdefault(subcluster) = \
-                {f"gene_{k}": v for k,v in gene_stats.items()}
-            groups[cluster] = group
-
-        # get read len stats for subclusters
-        for cluster in stats:
-            sc_tsv = SUBCLUSTER_STATS_TEMPLATE.format(WORK_DIR=WORK_DIR,
-                                                      cluster=cluster,
-                                                      group=groups[cluster])
-            sc_stats = pandas.read_csv(sc_tsv, sep='\t')
-            for sc, row in sc_stats.iterrows():
-                stats[cluster][str(sc)].update(dict(
-                    read_len_mean=row['mu'],
-                    read_len_dev=row['sigma'],
-                    read_count=row['N']))
-
-        # convert stats to table
-        df = pandas.DataFrame({f"{cl}_{sc}": sc_statts
-                            for cl, cl_stats in stats.items()
-                            for sc, sc_stats in cl_stats.items()},) \
-                .T
-                         
-        # polsihed fasta
-        with open(str(output.fasta), 'wt') as fasta_out:
-            for cl_sc_id in files:
-                for read in SeqIO.parse(files[cl_sc_id]['fasta'], 'fasta'):
-                    np_read = read.id
-                    read.id = f"{NAME}_{cl_sc_id}"
-                    df.loc[cl_sc_id, 'length'] = len(read)
-                    N = df.loc[cl_sc_id, 'read_count']
-                    read.description = f"n_reads={N};rep_read={np_read}"
-                    fasta_out.write(read.format('fasta'))
-
-        # write out stats table
-        df.to_csv(str(output.stats), sep='\t')
-
-        with open(str(output.faa), 'wt') as faa_out:
-            for cl_sc_id in files:
-                N = 0
-                for gene in SeqIO.parse(files[cl_sc_id]['faa'], 'fasta'):
-                    N += 1
-                    read.id = f"{NAME}_{cl_sc_id}_{N}"
-                    faa_out.write(read.format('fasta'))
+    params:
+        work_dir=WORK_DIR,
+        name=NAME
+    script: '../scripts/compile_final_seqs.py'
