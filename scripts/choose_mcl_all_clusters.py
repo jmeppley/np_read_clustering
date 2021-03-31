@@ -23,9 +23,9 @@ from Bio import SeqIO
 
 # load the read lengths from the summary file
 read_lens = pandas.read_csv(snakemake.input.read_lens,
-                            sep='\t', 
-                            names=['read_id','sequence_length_template'], 
-                            index_col='read_id', 
+                            sep='\t',
+                            names=['read_id','sequence_length_template'],
+                            index_col='read_id',
                             header=None).sequence_length_template.to_dict()
 
 
@@ -38,11 +38,11 @@ count_cutoff = snakemake.params.min_cl_size
 # loop over clusters in mcl_file
 with open(str(snakemake.input.mcl)) as mcl_lines:
     for i,line in enumerate(mcl_lines):
-        
+
         # get cluster read names
         reads = set(line.strip().split())
         count = len(reads)
-        
+
         # get cluster read length dist
         cluster_lens = numpy.array([read_lens[r] for r in reads])
         counts, bins = numpy.histogram(cluster_lens, bins=100)
@@ -68,7 +68,7 @@ with open(str(snakemake.input.mcl)) as mcl_lines:
 cluster_table = pandas.DataFrame(cluster_data)
 
 ## assign groups
-# this serves 2 purposes: 
+# this serves 2 purposes:
 #  1) we limit the number of files in each folder (too many files can slow
 #     down snakemake)
 #  2) we enable running the workflow in chunks (can perform better in some
@@ -90,10 +90,6 @@ cluster_groups = {c:next(groups) for c in keepers['num']}
 cluster_table['group'] = [cluster_groups.get(c,None)
                           for c in cluster_table['num']]
 
-# save cluster table
-cluster_table.to_csv(str(snakemake.output.stats), sep='\t',
-                                      index=False)
-
 # write fasta files
 if not os.path.exists(str(snakemake.output.reads)):
     os.makedirs(str(snakemake.output.reads), exist_ok=True)
@@ -103,7 +99,7 @@ n_open = 250
 open_handle_ids = deque([])
 handles = {}
 def open_cluster_fasta(i):
-    """ 
+    """
     checks for open handle for this scluster and returns it if found
 
     otherwise closes oldest handle and replaes with new handle for this cluster
@@ -113,16 +109,16 @@ def open_cluster_fasta(i):
         return handles[i]
     except KeyError:
         pass
-    
+
     # close handle(s) if we have too many
     while len(handles) > n_open - 1:
         # drop oldest
         drop_id = open_handle_ids.popleft()
-        
+
         # close and delete
         handles[drop_id].close()
         del handles[drop_id]
-        
+
     group = cluster_groups[i]
     fasta_file = f"{snakemake.output.reads}/group.{group}/cluster.{i}.fasta"
     fd = os.path.dirname(fasta_file)
@@ -132,14 +128,20 @@ def open_cluster_fasta(i):
     handles[i] = handle
     open_handle_ids.append(i)
     return handle
-    
+
 # loop over all reads and write out
+skipped_read_count = 0
 for read in SeqIO.parse(snakemake.input.fasta, 'fasta'):
     try:
         cluster = read_clusters[read.id]
     except KeyError:
         # skip if no cluster
+        skipped_read_count += 1
         continue
-    
+
     open_cluster_fasta(cluster).write(read.format('fasta'))
-                
+
+cluster_table.loc[-1] = (skipped_read_count, None, None, False, None)
+# save cluster table
+cluster_table.to_csv(str(snakemake.output.stats), sep='\t',
+                                      index=False)

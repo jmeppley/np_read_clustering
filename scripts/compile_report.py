@@ -22,12 +22,14 @@ def main(input, output, params):
     with open(str(output.report), 'wt') as output_handle:
         cluster_stats = pandas.read_csv(str(input.mcl_stats), sep='\t',
                                         index_col=0)
+        n_reads = cluster_stats['count'].sum()
         n_clusters = cluster_stats.shape[0]
         n_gt_size_cutoff = cluster_stats.query(f'count >= {params.min_cl_size}').shape[0]
         n_kept = cluster_stats.query('keep').shape[0]
 
         output_handle.write(f"Cluster Search Results:\n"
                             f"  minimap2 clusters:\n"
+                            f"    reads: {n_reads}\n"
                             f"    clusters: {n_clusters}\n"
                             f"    gt_{params.min_cl_size}: {n_gt_size_cutoff}\n"
                             f"    kept_clusters: {n_kept}\n\n")

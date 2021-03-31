@@ -150,7 +150,7 @@ def plot_cluster_hists(subclusters,
         ))
 
     # build cluster stats table
-    write_cols = ['mu', 'sigma', 'ratio', 'n_ratio', 'N']
+    write_cols = ['mu', 'sigma', 'ratio', 'n_ratio', 'N', 'keep']
     cl_st_table = pandas.DataFrame([[i,] + [d[k] for k in write_cols] 
                                     for i,d in cluster_stats.items()],
                                    columns=['index'] + write_cols)
