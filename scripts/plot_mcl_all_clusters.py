@@ -27,10 +27,12 @@ read_lens = pandas.read_csv(snakemake.input.read_lens,
                             index_col='read_id', 
                             header=None).sequence_length_template.to_dict()
 
-# load the all.v.all mfrac values
-mfrac_dict = pandas.read_csv(snakemake.input.abc, sep='\t',
-                             names=['q', 'h', 'mfrac'], header=None,
-                             index_col=['q','h']).mfrac.to_dict()
+# load the all.v.all mfrac values (but just map pairs where q > h)
+mfrac_dict = {tuple(sorted(i)):m
+              for i,m in pandas.read_csv(snakemake.input.abc, sep='\t',
+                                         names=['q', 'h', 'mfrac'],
+                                         header=None, index_col=['q','h']) \
+                               .mfrac.items()}
 
 def get_mfracs(reads, mfrac_dict=mfrac_dict):
     return [mfrac_dict.get((r1, r2), 0)
@@ -38,6 +40,7 @@ def get_mfracs(reads, mfrac_dict=mfrac_dict):
             for r2 in reads
             if r2 > r1
            ]
+
 # load the clusters
 with open(snakemake.input.mcl) as mcl_lines:
     all_clusters = [line.strip().split() for line in mcl_lines]
@@ -51,22 +54,23 @@ N0=0
 
 while True:
     clusters = all_clusters[N0:N0+ROWS*COLS]
+    if len(clusters) == 0:
+        break
     rows = int(numpy.ceil(len(clusters)/COLS))
 
-    fig, axes = plt.subplots(rows, COLS*2, figsize=[COLS*4,rows], sharex=False)
+    fig, axes = plt.subplots(rows, COLS*2, figsize=[COLS*4,rows], sharex=False,
+                            squeeze=False)
     fig.subplots_adjust(hspace=.7, wspace=.6)
 
     cluster_iter = enumerate(clusters, start=N0)
     axes_list = axes.flatten()
-    for i in range(0, len(axes_list), 2):
-        ax1, ax2 = axes_list[i:i+2]
-        try:
-            i, cluster = next(cluster_iter)
-        except StopIteration:
-            break
+    for i, cluster in enumerate(clusters):
+        j = i*2
+        ax1, ax2 = axes_list[j:j+2]
 
         # plot hist of pairwise mfracs
-        h = ax1.hist(get_mfracs(cluster, mfrac_dict=mfrac_dict), bins=100, range=[0,1])
+        h = ax1.hist(get_mfracs(cluster, mfrac_dict=mfrac_dict), bins=100,
+                     range=[0,100])
 
         # plot hist of read lens
         cluster_lens = numpy.array([read_lens[r] for r in cluster])
@@ -84,7 +88,8 @@ while True:
             ax1.set_ylabel('keep')
 
         ax2.set_ylabel(f"c{i} n={len(cluster)}")
-        if ax1 in axes[-1]:
+        # only put xlabels on bottom plots
+        if i >= len(clusters) - COLS:
             xl = ax1.set_xlabel("score")
             xl = ax2.set_xlabel("length")
 
@@ -92,6 +97,10 @@ while True:
         for ax in [ax1, ax2]:
             for side in ['top', 'right']:
                 ax.spines[side].set_visible(False)
+
+    # hide unused axes (on last page)
+    for i in range(j+2, len(axes_list)):
+        fig.delaxes(axes_list[i])
 
     pdf.savefig(bbox_inches='tight')
     plt.close()
