@@ -45,7 +45,7 @@ def main(input, output, params):
         sc_tsv = (f"{params.work_dir}/refine_lastal/group.{groups[cluster]}"
                   f"/cluster.{cluster}/subclusters/cluster_stats.tsv")
 
-        sc_stats = pandas.read_csv(sc_tsv, sep='\t')
+        sc_stats = pandas.read_csv(sc_tsv, sep='\t', index_col=0)
         for sc, row in sc_stats.iterrows():
             stats[cluster].setdefault(str(sc),{}).update(dict(
                 read_len_mean=row['mu'],

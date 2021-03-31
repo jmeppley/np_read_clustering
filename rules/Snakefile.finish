@@ -1,20 +1,18 @@
-import pandas
-
 SIGMA_CUTOFF = config.get('sigma_cutoff', 500)
 
-def get_sc_stats_files(w, as_dict=False):
+def get_refining_mcls(w, as_dict=False):
     """ Find all the stats files for subcluster choosing (one for each kept
     cluster)
 
     Return a list if called from input, and dict for the python code
     """
-    sc_stats = \
-        {cluster: f'{WORK_DIR}/refine_lastal/group.{group}/cluster.{cluster}/subclusters/cluster_stats.tsv'
+    sc_mcls = \
+        {cluster: f'{WORK_DIR}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{MFRAC_CUTOFF}.I{MCL_I}.mcl'
          for group, cluster in get_pre_filtered_clusters()}
 
     if as_dict:
-        return sc_stats
-    return sc_stats.values()
+        return sc_mcls
+    return sc_mcls.values()
 
 
 rule compile_report:
@@ -29,7 +27,7 @@ rule compile_report:
     input:
         pol_stats=f"{WORK_DIR}/final/polished.seqs.stats.tsv",
         mcl_stats=f'{WORK_DIR}/mcl_all/cluster_stats.tsv',
-        sc_stats=get_sc_stats_files,
+        sc_mcls=get_refining_mcls,
     params:
         min_cl_size=MIN_POL_READS + 1,
         sigma_cutoff=SIGMA_CUTOFF

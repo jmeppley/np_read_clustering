@@ -114,8 +114,8 @@ def plot_cluster_hists(subclusters,
     # first pass to chose subclusters to keep and plot
     cluster_stats = {}
     for i, subcluster in enumerate(subclusters):
+        keep = True
         if len(subcluster) < params.get('min_sub_size', 10):
-            # all the reast will be smaller
             break
         
         # calculate best normal fit to length dist
@@ -125,7 +125,7 @@ def plot_cluster_hists(subclusters,
         mu, sigma = stats.norm.fit(cluster_lens)
 
         if sigma_cutoff > 0 and sigma > sigma_cutoff:
-            continue
+            keep = False
         
         # calculate the stats
         X = numpy.array([numpy.mean((bins[i], bins[i-1])) for i in range(1,len(bins))])
@@ -143,22 +143,33 @@ def plot_cluster_hists(subclusters,
         n_ratio = n_in / (n_out + n_in)
 
         cluster_stats[i] = dict(zip(
-            ['mu', 'sigma', 'ratio', 'n_ratio', 'N', 'counts', 'bins', 'X'],
-            [mu, sigma, ratio, n_ratio, len(subcluster), counts, bins, X]
+            ['mu', 'sigma', 'ratio', 'n_ratio', 'N', 'keep', 'counts', 'bins', 'X'],
+            [mu, sigma, ratio, n_ratio, len(subcluster), keep, counts, bins, X]
         ))
+
+    # build cluster stats table
+    write_cols = ['mu', 'sigma', 'ratio', 'n_ratio', 'N']
+    cl_st_table = pandas.DataFrame([[i,] + [d[k] for k in write_cols] 
+                                    for i,d in cluster_stats.items()],
+                                   columns=['index'] + write_cols)
+    # write stats to file
+    cl_st_table.to_csv(stats_file, sep='\t', index=None)
+
+    # pull out list of good subclusters
+    subcluster_ids = list(cl_st_table.query('keep').index)
 
     # load agg hits
     agg_table = pandas.read_csv(agg_file, sep='\t')
         
     # max 8 per page
     mx_rows = 8
-    for subcluster_ids in grouper_trim(cluster_stats.keys(), mx_rows):
-        N = len(subcluster_ids)
+    for page_sc_ids in grouper_trim(cluster_stats.keys(), mx_rows):
+        N = len(page_sc_ids)
         fig, axes = plt.subplots(N, 4, figsize=[11 * N / mx_rows, 8.5], sharey="col", sharex="col", squeeze=False)
         fig.subplots_adjust(hspace=.7, wspace=.6)
 
         ax_rows = iter(axes)
-        for i, subcluster_id in enumerate(subcluster_ids):
+        for i, subcluster_id in enumerate(page_sc_ids):
              
             axs = next(ax_rows)
             
@@ -226,14 +237,14 @@ def plot_cluster_hists(subclusters,
         plt.close()
         
     pdf.close()
-    
+
     # save stats to file, but drop extra data first
     write_cols = ['mu', 'sigma', 'ratio', 'n_ratio', 'N']
     pandas.DataFrame([[i,] + [d[k] for k in write_cols] 
                       for i,d in cluster_stats.items()],
                      columns=['index'] + write_cols).to_csv(stats_file, sep='\t', index=None)
-    
-    return cluster_stats.keys()
+
+    return subcluster_ids
 
 def get_N_colors(N, cmap_name='Dark2'):
     """ given N and a colormap, get N evenly spaced colors"""
