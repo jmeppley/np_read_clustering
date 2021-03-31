@@ -33,6 +33,7 @@ rule compile_report:
         sigma_cutoff=SIGMA_CUTOFF
     output:
         report=REPORT_FILE
+    benchmark: REPORT_FILE + ".time"
     script: "../scripts/compile_report.py"
 
 
@@ -45,6 +46,7 @@ rule compile_final_seqs:
         fasta=f"{WORK_DIR}/final/polished.seqs.fasta",
         faa=f"{WORK_DIR}/final/polished.seqs.faa",
         stats=f"{WORK_DIR}/final/polished.seqs.stats.tsv"
+    benchmark: f"{WORK_DIR}/final/polished.seqs.stats.tsv.time"
     params:
         work_dir=WORK_DIR,
         name=NAME
