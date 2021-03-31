@@ -12,6 +12,8 @@ plot all the mcl clusters:
 """
 import pandas, numpy, os
 from scipy import stats
+import matplotlib
+matplotlib.use('pdf')
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -58,7 +60,10 @@ while True:
     axes_list = axes.flatten()
     for i in range(0, len(axes_list), 2):
         ax1, ax2 = axes_list[i:i+2]
-        i, cluster = next(cluster_iter)
+        try:
+            i, cluster = next(cluster_iter)
+        except StopIteration:
+            break
 
         # plot hist of pairwise mfracs
         h = ax1.hist(get_mfracs(cluster, mfrac_dict=mfrac_dict), bins=100, range=[0,1])
