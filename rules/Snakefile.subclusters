@@ -67,4 +67,4 @@ rule prodigal:
     output:
         faa='{prefix}/{name}.faa',
         gff='{prefix}/{name}.gff',
-    shell: 'prodigal -a {output.faa} -f gff -o {output.gff} -p meta -i {input}'
+    shell: 'prodigal -a {output.faa} -f gff -o {output.gff} -p meta -i {input} > {output.gff}.log 2>&1'

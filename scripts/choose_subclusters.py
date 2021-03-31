@@ -32,6 +32,8 @@ from functools import partial
 from itertools import zip_longest
 
 from scipy import stats
+import matplotlib
+matplotlib.use('pdf')
 from matplotlib import pyplot as plt, cm, colors
 from matplotlib.patches import Polygon
 from matplotlib.backends.backend_pdf import PdfPages
