@@ -23,7 +23,6 @@ rule cluster_abc:
     benchmark:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{mfrac_cutoff}.abc.time'
     run: 
-        from jme.jupy_tools.hit_tables import BLAST_PLUS
         pandas.read_csv(str(input), sep='\t') \
             .query(f'mfrac >= {MFRAC_CUTOFF}') \
             .set_index(['query','hit']) \
@@ -38,10 +37,10 @@ rule agg_lastal_hits:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
     benchmark:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg.time'
-    run: 
-        from jme.jupy_tools.hit_tables import agg_hit_table, BLAST_PLUS
-        agg_hit_table(str(input), format=BLAST_PLUS) \
-                .to_csv(str(output), sep='\t', index=None)
+    params:
+        format='BlastTab+'
+    conda: '../conda/cluster.yaml'
+    script: '../scripts/agg_minimap_results.py'
 
 rule cluster_lastal:
     input: '{output_dir}/mcl_all/reads/group.{group}/cluster.{cluster}.fasta'

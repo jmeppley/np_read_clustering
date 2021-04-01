@@ -44,25 +44,36 @@ rule merge_abc:
 
 rule window_abc:
     """
-    Aggregates hits for query/hit pairs, filters for 80% coverage, and
-    writes mfrac (= %ID * frac covered) to distance matrix (abc file)
+    Filters aggergated hits, and writes out mfrac values for each pair
     """
-    input: '{output_dir}/windows/cluster/window.{window}/self.paf'
+    input: '{output_dir}/windows/cluster/window.{window}/self.paf.agg'
     output: '{output_dir}/windows/cluster/window.{window}/self.abc'
     benchmark: '{output_dir}/windows/cluster/window.{window}/self.abc.time'
-    run:
-        from jme.jupy_tools.hit_tables import agg_hit_table, PAF
-        paf_file = str(input)
-        if os.path.getsize(paf_file) > 0:
-            agg_hit_table(paf_file, format=PAF) \
-                .query(f'mlen >= {MM_COV_FRAC} * ((qlen + hlen) / 2)') \
-                .set_index(['query', 'hit']) \
-                .mfrac \
-                .to_csv(str(output), sep='\t', header=None)
-        else:
-            # input is empty, touch the output
-            with open(str(output), 'wt') as out_handle:
-                pass
+    run: 
+        with open(str(output), 'wt') as out_handle:
+            if os.path.getsize(str(input)) > 0:
+                for query, hit, score in \
+                        pandas.read_csv(str(input), sep='\t') \
+                        .query(f'(hit != query) and ' \
+                               f'(mlen >= {MM_COV_FRAC} * ((qlen + hlen) / 2))') \
+                        ['query','hit','mfrac'].values:
+
+                    # MCL wants explicit bi directional scores
+                    #  but minima only reports hits in one direction`
+                    abc_out.write(f"{query}\t{hit}\t{mfrac:0.1f}\n{hit}\t{query}\t{mfrac:0.1f}\n")
+                    
+
+rule minimap_agg:
+    """
+    Aggregates hits for query/hit pairs
+    """
+    input: '{file_name}.paf'
+    output: '{file_name}.paf.agg'
+    benchmark: '{file_name}.paf.agg.time'
+    params:
+        format='PAF'
+    conda: '../conda/cluster.yaml'
+    script: '../scripts/agg_minimap_results.py'
 
 rule window_minimap:
     input: '{output_dir}/windows/reads/reads.{window}.fasta'

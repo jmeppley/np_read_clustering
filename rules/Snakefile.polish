@@ -10,7 +10,10 @@ MIN_Q = config.get('min_q', 9)
 
 def get_polished_comparison_files(kind=None):
     """ return a list of output files for the polishing step for all subclusters
-    if GROUP is set (config['group']), only that group of clusters is processed """
+    if GROUP is set (config['group']), only that group of clusters is processed 
+
+    NOTE: the .paf.agg suffix will use the minimap_agg rule from
+    Snakefile.minimap"""
     logger.debug("Getting output files from polishing")
 
     out_fnames = ['medaka.v.drafts.gene.lengths',
@@ -64,16 +67,6 @@ rule compare_genes:
             names.append(name)
         stats = pandas.DataFrame(data, index=names)
         stats.sort_index().to_csv(str(output), sep='\t')            
-
-rule agg_draft_hits:
-    """ aggregate the minimap output by hit/query pairs to get a shorter summary table """
-    input: '{prefix}/medaka.v.drafts.paf'
-    output: '{prefix}/medaka.v.drafts.paf.agg'
-    benchmark: '{prefix}/medaka.v.drafts.paf.agg.time'
-    run: 
-        from jme.jupy_tools.hit_tables import agg_hit_table, PAF
-        agg_hit_table(str(input), format=PAF) \
-                .to_csv(str(output), sep='\t', index=None)
 
 rule compare_drafts:
     """ map polished seq agaisnt all the drafts """
