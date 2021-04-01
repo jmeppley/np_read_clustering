@@ -52,15 +52,15 @@ rule window_abc:
     run: 
         with open(str(output), 'wt') as out_handle:
             if os.path.getsize(str(input)) > 0:
-                for query, hit, score in \
+                for query, hit, mfrac in \
                         pandas.read_csv(str(input), sep='\t') \
                         .query(f'(hit != query) and ' \
                                f'(mlen >= {MM_COV_FRAC} * ((qlen + hlen) / 2))') \
-                        ['query','hit','mfrac'].values:
+                        [['query','hit','mfrac']].values:
 
                     # MCL wants explicit bi directional scores
                     #  but minima only reports hits in one direction`
-                    abc_out.write(f"{query}\t{hit}\t{mfrac:0.1f}\n{hit}\t{query}\t{mfrac:0.1f}\n")
+                    out_handle.write(f"{query}\t{hit}\t{mfrac:0.2f}\n{hit}\t{query}\t{mfrac:0.2f}\n")
                     
 
 rule minimap_agg:
