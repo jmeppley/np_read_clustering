@@ -47,7 +47,10 @@ def main(input, output, params):
 
         sc_stats = pandas.read_csv(sc_tsv, sep='\t', index_col=0)
         for sc, row in sc_stats.iterrows():
-            stats[cluster].setdefault(str(sc),{}).update(dict(
+            sc = str(sc)
+            if sc not in stats[cluster]:
+                continue
+            stats[cluster][sc].update(dict(
                 read_len_mean=row['mu'],
                 read_len_dev=row['sigma'],
                 read_count=row['N']))

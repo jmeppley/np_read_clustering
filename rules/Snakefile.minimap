@@ -50,7 +50,6 @@ rule window_abc:
     input: '{output_dir}/windows/cluster/window.{window}/self.paf'
     output: '{output_dir}/windows/cluster/window.{window}/self.abc'
     benchmark: '{output_dir}/windows/cluster/window.{window}/self.abc.time'
-    conda: '../conda/cluster.yaml'
     run:
         from jme.jupy_tools.hit_tables import agg_hit_table, PAF
         paf_file = str(input)

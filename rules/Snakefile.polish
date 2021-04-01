@@ -14,7 +14,7 @@ def get_polished_comparison_files(kind=None):
     logger.debug("Getting output files from polishing")
 
     out_fnames = ['medaka.v.drafts.gene.lengths',
-                  'medaka.v.drafts.m8.agg']
+                  'medaka.v.drafts.paf.agg']
     if kind == 'gene':
         out_fnames = out_fnames[:1]
 
@@ -70,7 +70,6 @@ rule agg_draft_hits:
     input: '{prefix}/medaka.v.drafts.paf'
     output: '{prefix}/medaka.v.drafts.paf.agg'
     benchmark: '{prefix}/medaka.v.drafts.paf.agg.time'
-    conda: '../conda/cluster.yaml'
     run: 
         from jme.jupy_tools.hit_tables import agg_hit_table, PAF
         agg_hit_table(str(input), format=PAF) \
@@ -84,7 +83,9 @@ rule compare_drafts:
     output: '{prefix}/medaka.v.drafts.paf'
     benchmark: '{prefix}/medaka.v.drafts.paf.time'
     conda: '../conda/cluster.yaml'
-    shell: 'minimap2 -x map-ont {input.drafts} {input.final} > {output}'
+    shell: 'minimap2 -x map-ont {input.drafts} {input.final} \
+            > {output} \
+            2> {output}.log'
 
 rule collect_drafts:
     """ put all the drafts into a fasta file to compare with the final sequence """
