@@ -121,6 +121,7 @@ include: "rules/Snakefile.finish"
 rule finish:
     input:
         report=REPORT_FILE,
+        polished=lambda w: get_polished_comparison_files(),
         clusters_pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',
 
 ## STEP 1: windows -> minimap2 -> mcl

@@ -88,7 +88,7 @@ else:
 groups = cycle(range(n_groups))
 cluster_groups = {c:next(groups) for c in keepers['num']}
 cluster_table['group'] = [cluster_groups.get(c,None) if k else None
-                          for c,k in cluster_table[['num','keep']]]
+                          for c,k in cluster_table[['num','keep']].values]
 
 # write fasta files
 if not os.path.exists(str(snakemake.output.reads)):
