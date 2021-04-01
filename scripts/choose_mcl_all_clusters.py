@@ -87,8 +87,8 @@ else:
 # assigne a group to each cluster (round-robin)
 groups = cycle(range(n_groups))
 cluster_groups = {c:next(groups) for c in keepers['num']}
-cluster_table['group'] = [cluster_groups.get(c,None)
-                          for c in cluster_table['num']]
+cluster_table['group'] = [cluster_groups.get(c,None) if k else None
+                          for c,k in cluster_table[['num','keep']]]
 
 # write fasta files
 if not os.path.exists(str(snakemake.output.reads)):
@@ -141,7 +141,10 @@ for read in SeqIO.parse(snakemake.input.fasta, 'fasta'):
 
     open_cluster_fasta(cluster).write(read.format('fasta'))
 
-cluster_table.loc[-1] = (skipped_read_count, None, None, False, None)
+# add row for unclustered reads
+for k,v in dict(i=-1, count=skipped_read_count, keep=False).items():
+    cluster_table.loc[-1,k] = v
+
 # save cluster table
 cluster_table.to_csv(str(snakemake.output.stats), sep='\t',
                                       index=False)
