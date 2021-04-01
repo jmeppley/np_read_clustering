@@ -40,6 +40,7 @@ rule compare_genes:
     """ tabulate the number, mean length, and total AAs of predicted genes for each draft """
     input: comparison_inputs
     output: '{prefix}/medaka.v.drafts.gene.lengths'
+    benchmark: '{prefix}/medaka.v.drafts.gene.lengths.time'
     run:
         data = []
         names = []
@@ -66,10 +67,9 @@ rule compare_genes:
 
 rule agg_draft_hits:
     """ aggregate the lastal output by hit/query pairs to get a shorter summary table """
-    input:
-        '{prefix}/medaka.v.drafts.m8'
-    output:
-        '{prefix}/medaka.v.drafts.m8.agg'
+    input: '{prefix}/medaka.v.drafts.m8'
+    output: '{prefix}/medaka.v.drafts.m8.agg'
+    benchmark: '{prefix}/medaka.v.drafts.m8.agg.time'
     run: 
         from jme.jupy_tools.hit_tables import agg_hit_table, BLAST_PLUS
         agg_hit_table(str(input), format=BLAST_PLUS) \
@@ -80,8 +80,8 @@ rule compare_drafts:
     input: 
         final='{prefix}/medaka.fasta',
         drafts='{prefix}/drafts.fasta'
-    output:
-        '{prefix}/medaka.v.drafts.m8'
+    output: '{prefix}/medaka.v.drafts.m8'
+    benchmark: '{prefix}/medaka.v.drafts.m8.time'
     threads: 10
     shell:
         """
@@ -93,6 +93,7 @@ rule collect_drafts:
     """ put all the drafts into a fasta file to compare with the final sequence """
     input: lambda w: [f"{w.prefix}/draft.{n}.fasta" for n in range(RACON_ITERS + 1)]
     output: '{prefix}/drafts.fasta'
+    benchmark: '{prefix}/drafts.fasta.time'
     run:
         with open(str(output), 'wt') as fasta_out:
             for draft in input:
@@ -104,6 +105,7 @@ rule minimap_4_reference:
     """ all v all to pick a ref read """
     input: '{prefix}/reads/subcluster.{subcluster}.fasta'
     output: '{prefix}/subcluster.{subcluster}/all.v.all.paf'
+    benchmark: '{prefix}/subcluster.{subcluster}/all.v.all.paf.time'
     threads: 10
     shell: 'minimap2 -t {threads} -x ava-ont {input} {input} > {output}'
 
@@ -115,6 +117,7 @@ rule pick_ref_from_paf:
     output:
         ref='{prefix}/subcluster.{subcluster}/draft.0.fasta',
         others='{prefix}/subcluster.{subcluster}/other_reads.fasta'
+    benchmark: '{prefix}/subcluster.{subcluster}/draft.0.fasta.time'
     script: '../scripts/pick_ref_from_paf.py'        
 
 rule minimap_4_racon:
@@ -122,6 +125,7 @@ rule minimap_4_racon:
         draft=lambda w: f'{w.prefix}/subcluster.{w.subcluster}/draft.{int(w.racon_i) - 1}.fasta',
         reads='{prefix}/subcluster.{subcluster}/other_reads.fasta'
     output: "{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam"
+    benchmark: "{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam.time"
     threads: 10
     shell: 'minimap2 -t {threads} -ax map-ont {input.draft} {input.reads} > {output}'
         
@@ -131,6 +135,7 @@ rule racon_iter:
         reads='{prefix}/subcluster.{subcluster}/other_reads.fasta',
         sam="{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam"
     output: '{prefix}/subcluster.{subcluster}/draft.{racon_i}.fasta'
+    benchmark: '{prefix}/subcluster.{subcluster}/draft.{racon_i}.fasta.time'
     conda: '../conda/polish.yaml'
     threads: 10
     shell: 'racon --include-unpolished \
@@ -146,6 +151,7 @@ rule medaka:
         draft=lambda w: '{prefix}/subcluster.{subcluster}/draft.{racon_iters}.fasta' \
                             .format(racon_iters=RACON_ITERS, **w)
     output: '{prefix}/subcluster.{subcluster}/medaka.fasta'
+    benchmark: '{prefix}/subcluster.{subcluster}/medaka.fasta.time'
     params:                                                                                      
         out_dir='{prefix}/subcluster.{subcluster}',
         model=config.get('MEDAKA_model', 'r941_min_high_g303')                                                          

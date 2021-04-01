@@ -31,6 +31,7 @@ checkpoint choose_subclusters:
         stats='{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/subclusters/cluster_stats.tsv',
         hist_pdf='{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/subclusters/cluster_hists.pdf',
         gene_pdf='{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/subclusters/cluster_synteny.pdf',
+    benchmark: '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/subclusters/reads.time'
     params:
         sigma_cutoff=SIGMA_CUTOFF,
         min_sub_size=MIN_POL_READS + 1,
@@ -45,6 +46,7 @@ rule unique_pfam:
         domtbl='{prefix}/{name}.faa.pfam.tbl',
     output:
         domtblU='{prefix}/{name}.faa.pfam.tbl.U',
+    benchmark: '{prefix}/{name}.faa.pfam.tbl.U.time'
     shell:
         "filter_blast_m8.py -f hmmsearchdom {input.domtbl} -U -s score  > {output.domtblU}"
 
@@ -55,6 +57,7 @@ if 'pfam_hmm_path' in config:
             hmm=config['pfam_hmm_path']
         output: 
             domtbl='{prefix}/{name}.faa.pfam.tbl',
+        benchmark: '{prefix}/{name}.faa.pfam.tbl.time'
         threads: 5
         shell: "hmmsearch --cpu {threads} --domtblout {output.domtbl} {input.hmm} {input.faa} > /dev/null"
 else:
@@ -67,4 +70,6 @@ rule prodigal:
     output:
         faa='{prefix}/{name}.faa',
         gff='{prefix}/{name}.gff',
+    benchmark: '{prefix}/{name}.gff.time'
     shell: 'prodigal -a {output.faa} -f gff -o {output.gff} -p meta -i {input} > {output.gff}.log 2>&1'
+
