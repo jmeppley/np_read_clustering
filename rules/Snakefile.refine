@@ -1,6 +1,5 @@
 from Bio import SeqIO
 import numpy, pandas, os
-from scipy import stats
 from snakemake import logger
 from jme.jupy_tools.hit_tables import BLAST_PLUS
 
@@ -23,6 +22,7 @@ rule cluster_abc:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{mfrac_cutoff}.abc'
     benchmark:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.gt{mfrac_cutoff}.abc.time'
+    conda: '../conda/cluster.yaml'
     run: 
         from jme.jupy_tools.hit_tables import BLAST_PLUS
         pandas.read_csv(str(input), sep='\t') \
@@ -39,6 +39,7 @@ rule agg_lastal_hits:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg'
     benchmark:
         '{output_dir}/refine_lastal/group.{group}/cluster.{cluster}/cluster.{cluster}.self.m8.agg.time'
+    conda: '../conda/cluster.yaml'
     run: 
         from jme.jupy_tools.hit_tables import agg_hit_table, BLAST_PLUS
         agg_hit_table(str(input), format=BLAST_PLUS) \
@@ -53,6 +54,7 @@ rule cluster_lastal:
     params:
         dbd='{output_dir}/mcl_all/reads/ldb/group.{group}/cluster.{cluster}.ldb'
     threads: 10
+    conda: '../conda/cluster.yaml'
     shell:
         """
         mkdir -p {params.dbd}
@@ -89,6 +91,7 @@ rule plot_clusters:
     params:
         sigma_cutoff=config.get('sigma_cutoff_pre',800),
         min_cl_size=MIN_POL_READS + 1,
+    conda: '../conda/cluster.yaml'
     script: '../scripts/plot_mcl_all_clusters.py'
 
 checkpoint choose_clusters:
@@ -109,4 +112,5 @@ checkpoint choose_clusters:
     params:
         sigma_cutoff=MM_SIGMA_CUTOFF,
         min_cl_size=MIN_POL_READS + 1,
+    conda: '../conda/cluster.yaml'
     script: '../scripts/choose_mcl_all_clusters.py'

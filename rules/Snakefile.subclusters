@@ -39,6 +39,7 @@ checkpoint choose_subclusters:
         gene_cmap='gnuplot2',
         max_synteny_reads=15,
         read_cmap='cool'
+    conda: '../conda/cluster.yaml'
     script: '../scripts/choose_subclusters.py'
 
 rule unique_pfam:
@@ -47,6 +48,7 @@ rule unique_pfam:
     output:
         domtblU='{prefix}/{name}.faa.pfam.tbl.U',
     benchmark: '{prefix}/{name}.faa.pfam.tbl.U.time'
+    conda: '../conda/cluster.yaml'
     shell:
         "filter_blast_m8.py -f hmmsearchdom {input.domtbl} -U -s score  > {output.domtblU}"
 
@@ -58,6 +60,7 @@ if 'pfam_hmm_path' in config:
         output: 
             domtbl='{prefix}/{name}.faa.pfam.tbl',
         benchmark: '{prefix}/{name}.faa.pfam.tbl.time'
+        conda: '../conda/genes.yaml'
         threads: 5
         shell: "hmmsearch --cpu {threads} --domtblout {output.domtbl} {input.hmm} {input.faa} > /dev/null"
 else:
@@ -71,5 +74,6 @@ rule prodigal:
         faa='{prefix}/{name}.faa',
         gff='{prefix}/{name}.gff',
     benchmark: '{prefix}/{name}.gff.time'
+    conda: '../conda/genes.yaml'
     shell: 'prodigal -a {output.faa} -f gff -o {output.gff} -p meta -i {input} > {output.gff}.log 2>&1'
 

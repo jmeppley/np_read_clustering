@@ -1,0 +1,14 @@
+channels:
+    - conda-forge
+    - bioconda
+    - jmeppley
+dependencies:
+    - minimap2
+    - mcl
+    - last
+    - jupy_tools
+    - py-metagenomics
+    - scipy
+    - pandas
+    - biopython
+

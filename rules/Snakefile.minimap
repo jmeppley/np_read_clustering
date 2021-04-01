@@ -19,6 +19,7 @@ rule mcl:
     output: '{file_root}.I{mcl_i}.mcl'
     benchmark: '{file_root}.I{mcl_i}.mcl.time'
     threads: 19
+    conda: '../conda/cluster.yaml'
     shell:
         "mcl {input} --abc -te {threads} -I {wildcards.mcl_i} -o {output} > {output}.log 2>&1"
 
@@ -49,6 +50,7 @@ rule window_abc:
     input: '{output_dir}/windows/cluster/window.{window}/self.paf'
     output: '{output_dir}/windows/cluster/window.{window}/self.abc'
     benchmark: '{output_dir}/windows/cluster/window.{window}/self.abc.time'
+    conda: '../conda/cluster.yaml'
     run:
         from jme.jupy_tools.hit_tables import agg_hit_table, PAF
         paf_file = str(input)
@@ -68,6 +70,7 @@ rule window_minimap:
     output: '{output_dir}/windows/cluster/window.{window}/self.paf'
     benchmark: '{output_dir}/windows/cluster/window.{window}/self.paf.time'
     threads: 10
+    conda: '../conda/cluster.yaml'
     shell:
         """
         minimap2 -x ava-ont -t 20 {input} {input} > {output} 2> {output}.log
@@ -92,9 +95,6 @@ checkpoint apply_fasta_size_window:
         read_lens=f'{WORK_DIR}/all.reads.lengths.tsv'
     benchmark: f'{WORK_DIR}/all.reads.lengths.tsv.time'
     run:
-        from jme.jupy_tools.utils import LogLogger
-        llogger_read = LogLogger(multiplier=10)
-        llogger_window = LogLogger(multiplier=2)
         handles = {}
         counts = {}
         read_lens = {}
@@ -131,7 +131,6 @@ checkpoint apply_fasta_size_window:
                     fasta_out = handles[window]
                 except:
                     out_file = f"{output.fasta}/reads.{window}.fasta"
-                    llogger_window.log("opnning file %d (%s) for window %s", (len(handles), out_file, window))
                     fasta_out = open(out_file, 'wt')
                     handles[window] = fasta_out
 
@@ -140,8 +139,6 @@ checkpoint apply_fasta_size_window:
                 window_num += 1
                 window_start = window_num * WINDOW_SPACING
             
-            llogger_read.log("wrote read %d (%s) of len %d to window %s", (i, read.id, l, windows))
-
 
         print(f'Closing {len(handles)} handles')
         for handle in handles.values():

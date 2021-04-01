@@ -66,13 +66,14 @@ rule compare_genes:
         stats.sort_index().to_csv(str(output), sep='\t')            
 
 rule agg_draft_hits:
-    """ aggregate the lastal output by hit/query pairs to get a shorter summary table """
-    input: '{prefix}/medaka.v.drafts.m8'
-    output: '{prefix}/medaka.v.drafts.m8.agg'
-    benchmark: '{prefix}/medaka.v.drafts.m8.agg.time'
+    """ aggregate the minimap output by hit/query pairs to get a shorter summary table """
+    input: '{prefix}/medaka.v.drafts.paf'
+    output: '{prefix}/medaka.v.drafts.paf.agg'
+    benchmark: '{prefix}/medaka.v.drafts.paf.agg.time'
+    conda: '../conda/cluster.yaml'
     run: 
-        from jme.jupy_tools.hit_tables import agg_hit_table, BLAST_PLUS
-        agg_hit_table(str(input), format=BLAST_PLUS) \
+        from jme.jupy_tools.hit_tables import agg_hit_table, PAF
+        agg_hit_table(str(input), format=PAF) \
                 .to_csv(str(output), sep='\t', index=None)
 
 rule compare_drafts:
@@ -80,14 +81,10 @@ rule compare_drafts:
     input: 
         final='{prefix}/medaka.fasta',
         drafts='{prefix}/drafts.fasta'
-    output: '{prefix}/medaka.v.drafts.m8'
-    benchmark: '{prefix}/medaka.v.drafts.m8.time'
-    threads: 10
-    shell:
-        """
-        lastdb -P {threads} {input.final} {input.final}
-        lastal -f blasttab+ -P {threads} {input.final} {input.drafts} > {output}
-        """
+    output: '{prefix}/medaka.v.drafts.paf'
+    benchmark: '{prefix}/medaka.v.drafts.paf.time'
+    conda: '../conda/cluster.yaml'
+    shell: 'minimap2 -x map-ont {input.drafts} {input.final} > {output}'
 
 rule collect_drafts:
     """ put all the drafts into a fasta file to compare with the final sequence """
@@ -106,6 +103,7 @@ rule minimap_4_reference:
     input: '{prefix}/reads/subcluster.{subcluster}.fasta'
     output: '{prefix}/subcluster.{subcluster}/all.v.all.paf'
     benchmark: '{prefix}/subcluster.{subcluster}/all.v.all.paf.time'
+    conda: '../conda/cluster.yaml'
     threads: 10
     shell: 'minimap2 -t {threads} -x ava-ont {input} {input} > {output}'
 
@@ -118,6 +116,7 @@ rule pick_ref_from_paf:
         ref='{prefix}/subcluster.{subcluster}/draft.0.fasta',
         others='{prefix}/subcluster.{subcluster}/other_reads.fasta'
     benchmark: '{prefix}/subcluster.{subcluster}/draft.0.fasta.time'
+    conda: '../conda/cluster.yaml'
     script: '../scripts/pick_ref_from_paf.py'        
 
 rule minimap_4_racon:
@@ -126,6 +125,7 @@ rule minimap_4_racon:
         reads='{prefix}/subcluster.{subcluster}/other_reads.fasta'
     output: "{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam"
     benchmark: "{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam.time"
+    conda: '../conda/cluster.yaml'
     threads: 10
     shell: 'minimap2 -t {threads} -ax map-ont {input.draft} {input.reads} > {output}'
         
