@@ -1,0 +1,49 @@
+# Configuration for the np_read_clustering_workflow
+#  Values coded here are the defaults, unless noted otherwise
+
+# File locations (defaults are overridden in this file for testing)
+all_fasta: test/test.small.fasta
+work_dir: test/outputs/nprc.small
+
+# naming prefix for polished sequences
+name: SEQ
+
+# PFAM HMM location (skipped unless set)
+# pfam_hmm_path: /path/to/pfam.hmm
+
+## performance tuning
+hmmer_threads: 4
+mcl_threads: 19
+# minimap2 and lastdb/lastal
+mapping_threads: 9
+# racon and medaka
+polishing_threads: 9
+
+## Clustering: first pass
+# minimum read length
+minimum_size: 0
+# window size
+window_size: 2000
+# window overlap
+window_overlap: 1000
+
+# minimap2 read overlap threshold
+mm_cov_frac: .8
+# the MCL inflation parameter (used in both passes)
+mcl_i: 5.0
+
+# maximum length std deviation for first clusters
+mm_sigma_cutoff: 800
+# minimum # of reads for polishing (clusters must be 1 larger)
+min_pol_reads: 9
+
+## Clustering: second pass
+# minimum %ID for clustering
+mfrac_cutoff: 85
+# maximum length std deviation for final clusters
+sigma_cutoff: 500
+
+## Polishing
+racon_iters: 3
+MEDAKA_model: r941_min_high_g303
+
