@@ -23,9 +23,13 @@ rule compile_report:
      * number of subclusters (and # > 10 and number kept)
      * number of polished seqs (with length stats)
      
+    (fasta and faa are only inputs so that they get done, they are not needed
+    for this)
     """
     input:
         pol_stats=f"{WORK_DIR}/final/polished.seqs.stats.tsv",
+        fasta=f"{WORK_DIR}/final/polished.seqs.fasta",
+        faa=f"{WORK_DIR}/final/polished.seqs.faa",
         mcl_stats=f'{WORK_DIR}/mcl_all/cluster_stats.tsv',
         sc_mcls=get_refining_mcls,
     params:
@@ -37,17 +41,61 @@ rule compile_report:
     script: "../scripts/compile_report.py"
 
 
-rule compile_final_seqs:
+rule remove_fragments:
+    """
+    Remove sequences that are just short subsets of others in the results
+    """
+    input:
+        frag_list=f"{WORK_DIR}/final/all/polished.fragmets.list",
+        file=f"{WORK_DIR}/final/all/polished.seqs.{{ext}}",
+    output:
+        file=f"{WORK_DIR}/final/polished.seqs.{{ext}}",
+    benchmark: f"{WORK_DIR}/final/polished.seqs.{{ext}}.time"
+    wildcard_constraints:
+        ext="(fasta|faa|stats.tsv)"
+    params:
+        screener=lambda w: "screen_list.py -f fasta" \
+                           if w.ext.startswith('f') \
+                           else "screen_table.py"
+    shell:
+        "{params.screener} -l {input.frag_list} {input.file} > {output.file}"
+
+rule identify_fragemnts:
+    """
+    Identify sequences that are just short subsets of others in the results
+    """
+    input:
+        paf=f"{WORK_DIR}/final/all/polished.v.self.paf",
+    output:
+        frag_list=f"{WORK_DIR}/final/all/polished.fragmets.list",
+    params:
+        format='PAF'
+    script: "../scripts/identify_fragments.py"
+
+rule polished_self_map:
+    " Compare all polished seqs to all with minimap "
+    input: f"{WORK_DIR}/final/all/polished.seqs.fasta"
+    output: f"{WORK_DIR}/final/all/polished.v.self.paf"
+    threads: MM_THREADS
+    shell: "minimap2 -x ava-ont {input} {input} \
+                > {output} \
+                2> {output}.log"
+
+rule collect_polished_seqs:
     """
     Collect polished sequences and stats
     """
-    input: lambda w: get_polished_comparison_files(kind='gene')
+    input: lambda w: get_polished_output_file_names(kind='genes')
     output:
-        fasta=f"{WORK_DIR}/final/polished.seqs.fasta",
-        faa=f"{WORK_DIR}/final/polished.seqs.faa",
-        stats=f"{WORK_DIR}/final/polished.seqs.stats.tsv"
-    benchmark: f"{WORK_DIR}/final/polished.seqs.stats.tsv.time"
+        fasta=f"{WORK_DIR}/final/all/polished.seqs.fasta",
+        faa=f"{WORK_DIR}/final/all/polished.seqs.faa",
+        stats=f"{WORK_DIR}/final/all/polished.seqs.stats.tsv"
+    benchmark: f"{WORK_DIR}/final/all/polished.seqs.stats.tsv.time"
     params:
         work_dir=WORK_DIR,
         name=NAME
-    script: '../scripts/compile_final_seqs.py'
+    script: '../scripts/compile_polished_seqs.py'
+
+# TODO
+#  * identify and filter out sequences that are fragments of longer sequences
+#  * annotate polished faa with PFAM

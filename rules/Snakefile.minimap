@@ -18,7 +18,7 @@ rule mcl:
     input: '{file_root}.abc'
     output: '{file_root}.I{mcl_i}.mcl'
     benchmark: '{file_root}.I{mcl_i}.mcl.time'
-    threads: 19
+    threads: MCL_THREADS
     conda: '../conda/cluster.yaml'
     shell:
         "mcl {input} --abc -te {threads} -I {wildcards.mcl_i} -o {output} > {output}.log 2>&1"
@@ -79,7 +79,7 @@ rule window_minimap:
     input: '{output_dir}/windows/reads/reads.{window}.fasta'
     output: '{output_dir}/windows/cluster/window.{window}/self.paf'
     benchmark: '{output_dir}/windows/cluster/window.{window}/self.paf.time'
-    threads: 10
+    threads: MM_THREADS
     conda: '../conda/cluster.yaml'
     shell:
         """

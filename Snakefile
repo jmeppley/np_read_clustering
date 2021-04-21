@@ -82,6 +82,10 @@ if GROUP >= 0:
 WORK_DIR = config.get('work_dir', 'np_clustering')
 logger.debug("Working directory is: " + WORK_DIR)
 
+MM_THREADS = config.get('mapping_threads', 9)
+MCL_THREADS = config.get('mcl_threads', 19)
+POLISH_THREADS = config.get('polishing_threads', 9)
+HMMER_THREADS = config.get('hmmer_threads', 4)
 
 ## STEP 1: windows -> minimap2 -> mcl
 ALL_FASTA = config.get('all_fasta', f"{WORK_DIR}/all.reads.fasta")
@@ -121,7 +125,7 @@ include: "rules/Snakefile.finish"
 rule finish:
     input:
         report=REPORT_FILE,
-        polished=lambda w: get_polished_comparison_files(),
+        polished=lambda w: get_polished_output_file_names(),
         clusters_pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',
 
 ## STEP 1: windows -> minimap2 -> mcl
@@ -141,5 +145,5 @@ rule step_3:
 ## STEP 4: polish
 rule step_4:
     input:
-        polished=lambda w: get_polished_comparison_files(),
+        polished=lambda w: get_polished_output_file_names(),
         clusters_pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',

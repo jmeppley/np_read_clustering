@@ -8,7 +8,11 @@ import pandas, numpy
 RACON_ITERS = config.get('racon_iters', 3)
 MIN_Q = config.get('min_q', 9)
 
-def get_polished_comparison_files(kind=None):
+OUT_FNAMES = {'genecomp':'medaka.v.drafts.gene.lengths',
+              'seqcomp': 'medaka.v.drafts.paf.agg',
+              'fasta': 'medaka.fasta'}
+
+def get_polished_output_file_names(kind=None):
     """ return a list of output files for the polishing step for all subclusters
     if GROUP is set (config['group']), only that group of clusters is processed 
 
@@ -16,10 +20,10 @@ def get_polished_comparison_files(kind=None):
     Snakefile.minimap"""
     logger.debug("Getting output files from polishing")
 
-    out_fnames = ['medaka.v.drafts.gene.lengths',
-                  'medaka.v.drafts.paf.agg']
-    if kind == 'gene':
-        out_fnames = out_fnames[:1]
+    if kind is None:
+        out_fnames = OUT_FNAMES.values()
+    else:
+        out_fnames = [OUT_FNAMES[kind],]
 
     gr_cl_sc_s = [(group, cluster, subcluster)
                   for group, cluster in get_pre_filtered_clusters() \
@@ -98,7 +102,7 @@ rule minimap_4_reference:
     output: '{prefix}/subcluster.{subcluster}/all.v.all.paf'
     benchmark: '{prefix}/subcluster.{subcluster}/all.v.all.paf.time'
     conda: '../conda/cluster.yaml'
-    threads: 10
+    threads: MM_THREADS
     shell: 'minimap2 -t {threads} -x ava-ont {input} {input} > {output}'
 
 rule pick_ref_from_paf:
@@ -120,7 +124,7 @@ rule minimap_4_racon:
     output: "{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam"
     benchmark: "{prefix}/subcluster.{subcluster}/draft.{racon_i}.sam.time"
     conda: '../conda/cluster.yaml'
-    threads: 10
+    threads: MM_THREADS
     shell: 'minimap2 -t {threads} -ax map-ont {input.draft} {input.reads} > {output}'
         
 rule racon_iter:
@@ -131,7 +135,7 @@ rule racon_iter:
     output: '{prefix}/subcluster.{subcluster}/draft.{racon_i}.fasta'
     benchmark: '{prefix}/subcluster.{subcluster}/draft.{racon_i}.fasta.time'
     conda: '../conda/polish.yaml'
-    threads: 10
+    threads: POLISH_THREADS
     shell: 'racon --include-unpolished \
                 --quality-threshold={MIN_Q} \
                 -t {threads} \
@@ -150,7 +154,7 @@ rule medaka:
         out_dir='{prefix}/subcluster.{subcluster}',
         model=config.get('MEDAKA_model', 'r941_min_high_g303')                                                          
     conda: '../conda/polish.yaml'
-    threads: 10
+    threads: POLISH_THREADS
     shell:                                                                                       
         """medaka_consensus -i {input.reads} -d {input.draft} \
             -o {params.out_dir} -t {threads} -m {params.model} \

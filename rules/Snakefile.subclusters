@@ -61,7 +61,7 @@ if 'pfam_hmm_path' in config:
             domtbl='{prefix}/{name}.faa.pfam.tbl',
         benchmark: '{prefix}/{name}.faa.pfam.tbl.time'
         conda: '../conda/genes.yaml'
-        threads: 5
+        threads: HMMER_THREADS
         shell: "hmmsearch --cpu {threads} --domtblout {output.domtbl} {input.hmm} {input.faa} > /dev/null"
 else:
     rule genes_dummy_annot:
