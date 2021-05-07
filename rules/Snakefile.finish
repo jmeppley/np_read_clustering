@@ -60,6 +60,8 @@ rule remove_fragments:
     shell:
         "{params.screener} -l {input.frag_list} {input.file} > {output.file}"
 
+ruleorder: remove_fragments > prodigal
+
 rule identify_fragemnts:
     """
     Identify sequences that are just short subsets of others in the results
@@ -85,7 +87,7 @@ rule collect_polished_seqs:
     """
     Collect polished sequences and stats
     """
-    input: lambda w: get_polished_output_file_names(kind='genes')
+    input: lambda w: get_polished_output_file_names(kind='genecomp')
     output:
         fasta=f"{WORK_DIR}/final/all/polished.seqs.fasta",
         faa=f"{WORK_DIR}/final/all/polished.seqs.faa",
