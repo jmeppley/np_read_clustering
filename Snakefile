@@ -96,11 +96,11 @@ include: "rules/Snakefile.minimap"
 
 
 ## STEP 2: filter -> lastal -> mcl
-# These are templates, since it's one per cluster
-CLST_REFINE_DIR = "{WORK_DIR}/refine_lastal/group.{group}/cluster.{cluster}"
-SUBCLUSTER_TEMPLATE = CLST_REFINE_DIR + "/self.m8.gt{MFRAC_CUTOFF}.I{MCL_I}.mcl"
-
 include: "rules/Snakefile.refine"
+# These are templates, since it's one per cluster
+CLST_REFINE_DIR = f"{WORK_DIR}/refine_lastal/group.{{group}}/cluster.{{cluster}}"
+SUBCLUSTER_TEMPLATE = CLST_REFINE_DIR + f"/self.m8.gt{MFRAC_CUTOFF}.I{MCL_I}.mcl"
+
 
 
 ## STEP 3: inspect and filter
@@ -136,11 +136,11 @@ rule step_1:
 
 ## STEP 2: filter -> lastal -> mcl
 rule step_2:
-    input: lambda w: get_subcluster_files(SUBCLUSTER_TEMPLATE)
+    input: lambda w: get_subcluster_mcl_files(SUBCLUSTER_TEMPLATE)
 
 ## STEP 3: inspect and filter
 rule step_3:
-    input: lambda w: get_subcluster_files(SUBCLUSTER_STATS_TEMPLATE)
+    input: lambda w: get_subcluster_mcl_files(SUBCLUSTER_STATS_TEMPLATE)
 
 ## STEP 4: polish
 rule step_4:
