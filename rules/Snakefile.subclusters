@@ -73,6 +73,8 @@ rule prodigal:
     output:
         faa='{prefix}/{name}.faa',
         gff='{prefix}/{name}.gff',
+    wildcard_constraints:
+        name='(?!polished)[^/]+'
     benchmark: '{prefix}/{name}.gff.time'
     conda: '../conda/genes.yaml'
     shell: 'prodigal -a {output.faa} -f gff -o {output.gff} -p meta -i {input} > {output.gff}.log 2>&1'

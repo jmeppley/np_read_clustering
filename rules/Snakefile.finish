@@ -79,6 +79,7 @@ rule polished_self_map:
     input: f"{WORK_DIR}/final/all/polished.seqs.fasta"
     output: f"{WORK_DIR}/final/all/polished.v.self.paf"
     threads: MM_THREADS
+    conda: '../conda/cluster.yaml'
     shell: "minimap2 -x ava-ont {input} {input} \
                 > {output} \
                 2> {output}.log"
