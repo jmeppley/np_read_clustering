@@ -78,7 +78,14 @@ ERROR: biopython is not installed!
 
 Make sure you are running this workflow using a conda environment with
 snakemake, pandas, and biopthon installed. We recommend using the definition file
-./conda/snake.yaml.
+./conda/snake.yaml with conda:
+
+    $ conda env create -p ./env -f ./conda/snake.yaml
+
+And make sure you activate the environment with:
+
+    $ conda activate ./env
+
 """)
     sys.exit(10)
 
