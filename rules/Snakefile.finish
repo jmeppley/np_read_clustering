@@ -53,6 +53,7 @@ rule remove_fragments:
     benchmark: f"{WORK_DIR}/final/polished.seqs.{{ext}}.time"
     wildcard_constraints:
         ext="(fasta|faa|stats.tsv)"
+    conda: '../conda/cluster.yaml'
     params:
         screener=lambda w: "screen_list.py -f fasta" \
                            if w.ext.startswith('f') \
@@ -72,6 +73,7 @@ rule identify_fragemnts:
         frag_list=f"{WORK_DIR}/final/all/polished.fragmets.list",
     params:
         format='PAF'
+    conda: '../conda/cluster.yaml'
     script: "../scripts/identify_fragments.py"
 
 rule polished_self_map:

@@ -1,11 +1,8 @@
 channels:
     - conda-forge
     - bioconda
-    - jmeppley
 dependencies:
     - mamba
     - snakemake-minimal
     - pandas
     - biopython
-    - py-metagenomics
-    - jupy_tools

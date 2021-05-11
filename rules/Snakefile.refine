@@ -1,7 +1,6 @@
 from Bio import SeqIO
 import numpy, pandas, os
 from snakemake import logger
-from jme.jupy_tools.hit_tables import BLAST_PLUS
 
 # config
 MM_SIGMA_CUTOFF = config.get('mm_sigma_cutoff', 800)  # length distribution width
