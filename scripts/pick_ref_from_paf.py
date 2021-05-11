@@ -1,5 +1,5 @@
 import pandas
-from jme.jupy_tools.hit_tables import parse_blast_m8, PAF
+from hit_tables import parse_blast_m8, PAF
 from Bio import SeqIO
 
 # pick a best read

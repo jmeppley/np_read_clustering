@@ -1,5 +1,5 @@
 import os
-from jme.jupy_tools.hit_tables import agg_hit_table
+from hit_tables import agg_hit_table
 
 hit_table = str(snakemake.input)
 fmt = str(snakemake.params.format).upper()

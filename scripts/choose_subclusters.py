@@ -40,7 +40,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 from snakemake.rules import Namedlist
 from Bio import SeqIO
 
-from jme.jupy_tools.hit_tables import parse_blast_m8, BLAST_PLUS
+from hit_tables import parse_blast_m8, BLAST_PLUS
 from edl import blastm8
 
 BLACK = (0, 0, 0, 1)
