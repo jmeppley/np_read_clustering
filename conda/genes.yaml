@@ -2,5 +2,5 @@ channels:
     - conda-forge
     - bioconda
 dependencies:
-    - prodigal
-    - hmmer
+    - prodigal >=2.6.0, <2.7
+    - hmmer >=3.3.0, <3.4
