@@ -68,6 +68,20 @@ Final outputs:
 
 """
 
+# print help for a common mistake
+try:
+    from Bio import SeqIO
+    import pandas
+except ImportError:
+    print("""
+ERROR: biopython is not installed!
+
+Make sure you are running this workflow using a conda environment with
+snakemake, pandas, and biopthon installed. We recommend using the definition file
+./conda/snake.yaml.
+""")
+    sys.exit(10)
+
 ### Global Params
 MCL_I = "{:0.1f}".format(config.get('mcl_i', 5.0))
 NAME = config.get('name', 'SEQ')
