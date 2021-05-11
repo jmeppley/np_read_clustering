@@ -3,6 +3,6 @@ channels:
     - bioconda
 dependencies:
     - mamba
-    - snakemake-minimal
-    - pandas
-    - biopython
+    - snakemake-minimal >=6.3, <6.4
+    - pandas >=1.2, <1.3
+    - biopython ==1.78

@@ -3,13 +3,12 @@ channels:
     - bioconda
     - jmeppley
 dependencies:
-    - minimap2
+    - minimap2 >=2.18, <2.19
     - mcl
     - last
-    - py-metagenomics
-    - scipy
-    - pandas
-    - biopython
-    - matplotlib
-
+    - matplotlib >=3.4, <3.5
+    - py-metagenomics >=1.3, <1.4
+    - scipy >=1.6, <1.7
+    - pandas >=1.2, <1.3
+    - biopython ==1.78
 
