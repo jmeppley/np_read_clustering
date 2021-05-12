@@ -114,9 +114,10 @@ We suggest you copy the provided example into a new file and modify the files ac
 The `-j` flag tells snakemake how many threads are availabe on your computer,
 and it will run workflow steps in parallel as much as is possible (usually).
 
-### multithreaded steps
+#### multithreaded steps
 Some steps in the workflow are mutithreaded (EG: minimap2). You can configure
 how many threads these teps get in the configuration (EG: mapping_threads).
+
 
 ### examples
 Note, we don't obother to use the --conda-frontend flag here assuming the conda environments have already been 
@@ -130,5 +131,4 @@ Or use the provided test config an override key values:
 
     $ snakemake --configfile=config.yaml -j 40 -p --use-conda \
         --config all_fasta=/path/to/reads.fasta work_dir=/path/to/output hmm_path=/dbs/PFAM.hmm
-
 
