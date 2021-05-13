@@ -1,0 +1,19 @@
+# find all the conda environment definition files
+envs, = glob_wildcards('conda/{env}.yaml')
+
+# skip the snakemake env
+envs = [e for e in envs if e != 'snake']
+
+print(envs)
+
+rule conda:
+    """ call dummy rules to create all the envs """
+    input: expand('conda/.{env}.ready', env=envs)
+    output: touch("conda/.conda.ready")
+
+rule prep_env:
+    """ do nothing, but require the conda env to be built """
+    input: 'conda/{env}.yaml'
+    output: 'conda/.{env}.ready'
+    conda: '../conda/{env}.yaml'
+    shell: "touch {output}"

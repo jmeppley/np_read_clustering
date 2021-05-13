@@ -10,3 +10,4 @@ __pycache__/
 env/
 test/outputs/
 .snakemake/
+conda/.*.ready

@@ -141,7 +141,6 @@ REPORT_FILE = f"{WORK_DIR}/final/report.txt"
 include: "rules/Snakefile.finish"
 
 ### Entry points
-
 ## the whole enchilada
 rule finish:
     input:
@@ -149,22 +148,67 @@ rule finish:
         polished=lambda w: get_polished_output_file_names(),
         clusters_pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',
 
+# The following targets can be used to run the workflow in pieces
+
 ## STEP 1: windows -> minimap2 -> mcl
 rule step_1:
+    """ Splits reads by size-windows and runs the initial clustering """
     input:
         stats=CLUSTER_STATS,
         pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',
 
+"""
+The fastest way to work through a large dataset in a cluster environment is to
+run steps 2, 3, and 4 in batches by group after the initial clustering in
+step 1. The initial clusters are grouped for this purpose (and also to
+reduce the number of files in each folder).
+
+First, run step 1:
+
+    $ snakemake --configfile=config.yaml -p -j 20 --use-conda step_1
+
+Then, run steps 2, 3 and 4  for each group, in parallel, across your HPC nodes. 
+The HPC script is left up to you, but the command run should look like:
+
+    $ snakemake --configfile=config.yaml -p j 20 --use-conda step_4 --config group=2
+
+Then finish up with:
+
+    $ snakemake --configfile=config.yaml -p j 20 --use-conda finish
+
+"""
 ## STEP 2: filter -> lastal -> mcl
 rule step_2:
+    """ refines selected initial clusters with lastal and mcl """
     input: lambda w: get_subcluster_mcl_files(SUBCLUSTER_TEMPLATE)
 
 ## STEP 3: inspect and filter
 rule step_3:
+    """ chooses final subclusters """
     input: lambda w: get_subcluster_mcl_files(SUBCLUSTER_STATS_TEMPLATE)
 
 ## STEP 4: polish
 rule step_4:
+    """ builds representative subcluster sequences """
     input:
         polished=lambda w: get_polished_output_file_names(),
         clusters_pdf=f'{WORK_DIR}/mcl_all/cluster_plots.pdf',
+
+
+## Just build the conda envs
+include: 'rules/Snakefile.conda'
+rule condaprep:
+    """
+    Just build the environments and do
+    nothing else. 
+
+    This is needed if you are running multiple jobs in parallel on a shared
+    filesystem. To avoid snakemake's conda env creation colliding with itself,
+    use this to build all the envs first. 
+
+    (The built in snakemake aparam to do this doesn't work because of the
+    checkpoints)
+    """
+    input: rules.conda.output
+    shell: 'rm {input}'
+
