@@ -12,7 +12,7 @@ setup() {
     
 @test "Testing step_1 with larger input" {
     # clear any old output
-    #rm -rf test/outputs/nprc
+    rm -rf test/outputs/nprc
     
     # run step 1
     run bash -c "snakemake --configfile config.yaml -p --use-conda --conda-frontend mamba --config all_fasta=test/test.fasta work_dir=test/outputs/nprc -j 20 step_1 > test/outputs/nprc.step1.log 2>&1"
@@ -40,8 +40,8 @@ setup() {
 
 @test "Testing group 4" {
     run bash -c "snakemake  --configfile config.yaml -p --use-conda \
-                            --config group=2 all_fasta=test/test.fasta work_dir=test/outputs/nprc \
-                            -j 20 step_4 > test/outputs/nprc.step4.g2.log 2>&1"
+                            --config group=4 all_fasta=test/test.fasta work_dir=test/outputs/nprc \
+                            -j 20 step_4 > test/outputs/nprc.step4.g4.log 2>&1"
     [ "$status" -eq 0 ]
 }
 
