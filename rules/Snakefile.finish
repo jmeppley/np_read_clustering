@@ -44,6 +44,10 @@ rule compile_report:
 rule remove_fragments:
     """
     Remove sequences that are just short subsets of others in the results
+    
+    NOTE: instead of filtering the faa file (which would require a new script),
+          we just run prodigal again on the filtered polished seqs
+          (The rule defined in Snakefile.subclusters takes care of it with no modification)
     """
     input:
         frag_list=f"{WORK_DIR}/final/all/polished.fragmets.list",
@@ -52,7 +56,7 @@ rule remove_fragments:
         file=f"{WORK_DIR}/final/polished.seqs.{{ext}}",
     benchmark: f"{WORK_DIR}/final/polished.seqs.{{ext}}.time"
     wildcard_constraints:
-        ext="(fasta|faa|stats.tsv)"
+        ext="(fasta|stats.tsv)"
     conda: '../conda/cluster.yaml'
     params:
         screener=lambda w: "screen_list.py -f fasta" \
@@ -60,8 +64,7 @@ rule remove_fragments:
                            else "screen_table.py"
     shell:
         "{params.screener} -l {input.frag_list} {input.file} > {output.file}"
-
-ruleorder: remove_fragments > prodigal
+        
 
 rule identify_fragemnts:
     """

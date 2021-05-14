@@ -58,4 +58,9 @@ setup() {
                            --use-conda --conda-frontend mamba \
                            --config all_fasta=test/test.fasta work_dir=test/outputs/nprc -j 20 finish > test/outputs/nprc.finish.log 2>&1"
     [ "$status" -eq 0 ]
+    
+    # check frag hits
+    run bash -c "grep -c . test/outputs/nprc/final/all/polished.fragmets.list"
+    [ "$status" -eq 0 ]
+    [ "${lines[0]}" == "3" ]
 }

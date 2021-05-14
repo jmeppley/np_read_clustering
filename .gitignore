@@ -6,6 +6,9 @@ __pycache__/
 # vim
 .*.sw[op]
 
+# jupyterlab
+.ipynb_checkpoints
+
 # testing
 env/
 test/outputs/
